@@ -12,8 +12,31 @@ env:
   S3_BUCKET: saayam-virginia-private
 
 jobs:
+  # JOB 0: SECURITY SCAN()
+  security-scan:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run Gitleaks scan
+        uses: zricethezav/gitleaks-action@v2
+        with:
+          args: detect --source=. --report-format=json --report-path=gitleaks-report.json --exit-code 1
+
+      - name: Upload Gitleaks report artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gitleaks-report
+          path: gitleaks-report.json
+  
   # JOB 1: Continuous Integration (Compile, Test, Quality Scans)
   build-and-test:
+    needs: security-scan
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository

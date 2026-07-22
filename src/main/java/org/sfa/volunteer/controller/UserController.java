@@ -7,12 +7,10 @@ import org.sfa.volunteer.dto.common.SaayamResponse;
 import org.sfa.volunteer.dto.common.SaayamStatusCode;
 import org.sfa.volunteer.dto.request.CreateUserRequest;
 import org.sfa.volunteer.dto.request.FindUserProfileUsingEmail;
-import org.sfa.volunteer.dto.request.UpdateOrganizationRequest;
 import org.sfa.volunteer.dto.request.UpdateUserProfileRequest;
 import org.sfa.volunteer.dto.request.SignOffRequest;
 import org.sfa.volunteer.dto.response.AddressStatusResponse;
 import org.sfa.volunteer.dto.response.CreateUserResponse;
-import org.sfa.volunteer.dto.response.OrganizationResponse;
 import org.sfa.volunteer.dto.response.PaginationResponse;
 import org.sfa.volunteer.dto.response.SignOffResponse;
 import org.sfa.volunteer.dto.response.UserProfileResponse;
@@ -107,19 +105,6 @@ public class UserController {
         return responseBuilder.buildSuccessResponse(SaayamStatusCode.USER_ACCOUNT_UPDATED, new Object[]{userId}, response);
     }
 
-    @PutMapping("/organization/{userId}")
-    public SaayamResponse<OrganizationResponse> updateUserOrganization(
-            @PathVariable String userId,
-            @RequestBody UpdateOrganizationRequest request) {
-        OrganizationResponse response = userService.updateUserOrganization(userId, request);
-        return responseBuilder.buildSuccessResponse(SaayamStatusCode.SUCCESS, new Object[]{userId}, response);
-    }
-
-    @GetMapping("/organization/{userId}")
-    public SaayamResponse<OrganizationResponse> getOrganizationByUserId(@PathVariable String userId) {
-        OrganizationResponse organization = userService.getOrganizationByUserId(userId);
-        return responseBuilder.buildSuccessResponse(SaayamStatusCode.SUCCESS, new Object[]{userId}, organization);
-    }
     /* Profile Pic Upload */
     // Helper
     private String regionHint(HttpServletRequest req) {

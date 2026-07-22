@@ -26,7 +26,12 @@ import org.springframework.test.context.TestPropertySource;
     "cors.allowed-methods=GET,POST,PUT,DELETE,OPTIONS",
     "cors.allowed-headers=Authorization,Content-Type",
     "cors.allowed-credentials=true",
-    "cors.allow-credentials=true"
+    "cors.allow-credentials=true",
+
+    // S3 configuration for profileImageStorageService (dummy values for context load)
+    "saayam.s3.buckets.euPrivate=test-bucket-eu",
+    "saayam.s3.buckets.usPrivate=test-bucket-us",
+    "saayam.s3.region=us-east-1"
 })
 class VolunteerApplicationTests {
 

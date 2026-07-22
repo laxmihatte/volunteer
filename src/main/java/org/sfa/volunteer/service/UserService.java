@@ -1,7 +1,6 @@
 package org.sfa.volunteer.service;
 
 import org.sfa.volunteer.dto.request.CreateUserRequest;
-import org.sfa.volunteer.dto.request.UpdateOrganizationRequest;
 import org.sfa.volunteer.dto.request.UpdateUserProfileRequest;
 
 import org.sfa.volunteer.dto.response.*;
@@ -23,9 +22,6 @@ public interface UserService {
 
     UserProfileResponse updateUserProfile(String userId, UpdateUserProfileRequest updateUserProfileRequest);
 
-    OrganizationResponse updateUserOrganization(String userId, UpdateOrganizationRequest request);
-
-    OrganizationResponse getOrganizationByUserId(String userId);
 
     SignOffResponse signOffUser(String userId, String reason);
 

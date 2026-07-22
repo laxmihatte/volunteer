@@ -2,22 +2,18 @@ package org.sfa.volunteer.service.impl;
 
 import jakarta.transaction.Transactional;
 import org.sfa.volunteer.dto.request.CreateUserRequest;
-import org.sfa.volunteer.dto.request.UpdateOrganizationRequest;
 import org.sfa.volunteer.dto.request.UpdateUserProfileRequest;
 import org.sfa.volunteer.dto.response.*;
 import org.sfa.volunteer.exception.CountryNotFoundException;
 import org.sfa.volunteer.exception.UserCategoryNotFoundException;
 import org.sfa.volunteer.exception.UserNotFoundException;
-import org.sfa.volunteer.exception.UserOrganizationNotFoundException;
 import org.sfa.volunteer.model.Country;
-import org.sfa.volunteer.model.Organization;
 import org.sfa.volunteer.model.State;
 import org.sfa.volunteer.model.User;
 import org.sfa.volunteer.model.UserCategory;
 import org.sfa.volunteer.model.UserSignOffReason;
 import org.sfa.volunteer.model.UserStatus;
 import org.sfa.volunteer.repository.CountryRepository;
-import org.sfa.volunteer.repository.OrganizationRepository;
 import org.sfa.volunteer.repository.StateRepository;
 import org.sfa.volunteer.repository.UserCategoryRepository;
 import org.sfa.volunteer.repository.UserRepository;
@@ -45,7 +41,6 @@ import java.util.stream.Collectors;
     public class UserServiceImpl implements UserService {
     private final UserRepository userRepository;
     private final UserStatusRepository userStatusRepository;
-    private final OrganizationRepository organizationRepository;
     private final UserSignOffReasonRepository userSignOffReasonRepository;
     private final UserCategoryRepository userCategoryRepository;
     private final CountryRepository countryRepository;
@@ -65,7 +60,6 @@ import java.util.stream.Collectors;
     public UserServiceImpl(
             UserRepository userRepository,
             UserStatusRepository userStatusRepository,
-            OrganizationRepository organizationRepository,
             UserCategoryRepository userCategoryRepository,
             CountryRepository countryRepository,
             StateRepository stateRepository,
@@ -73,7 +67,6 @@ import java.util.stream.Collectors;
 
         this.userRepository = userRepository;
         this.userStatusRepository = userStatusRepository;
-        this.organizationRepository = organizationRepository;
         this.userCategoryRepository = userCategoryRepository;
         this.countryRepository = countryRepository;
         this.stateRepository = stateRepository;
@@ -127,30 +120,6 @@ import java.util.stream.Collectors;
                 .userId(user.getId())
                 .countryName(user.getCountry() != null ? user.getCountry().getCountryName() : null)
                 .build();
-    }
-
-    @Override
-    public UserProfileResponse updateUserProfile(String userId, UpdateUserProfileRequest request) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new UserNotFoundException(userId));
-
-        // Update all fields from the request without null checks
-        user.setFirstName(request.firstName());
-        user.setMiddleName(request.middleName());
-        user.setLastName(request.lastName());
-        user.setAddressLine1(request.addressLine1());
-        user.setAddressLine2(request.addressLine2());
-        user.setAddressLine3(request.addressLine3());
-        user.setCity(request.cityName());
-        user.setZipCode(request.zipCode());
-        user.setProfilePicturePath(request.profilePicturePath());
-        user.setVolunteerStage(request.volunteerStage());
-        user.setVolunteerUpdateDate(request.volunteerUpdateDate());
-        user.setLastUpdateDate(ZonedDateTime.now(ZoneId.of("UTC")));
-
-        User updatedUser = userRepository.save(user);
-
-        return mapToUserProfileResponse(updatedUser);
     }
 
     @Override
@@ -269,67 +238,31 @@ import java.util.stream.Collectors;
                 .promotionWizardLastUpdateDate(user.getVolunteerUpdateDate())
                 .build();
     }
-
+    
     @Override
-    public OrganizationResponse updateUserOrganization(String userId, UpdateOrganizationRequest request) {
+    public UserProfileResponse updateUserProfile(String userId, UpdateUserProfileRequest request) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new UserNotFoundException(userId));
 
-        Organization organization = organizationRepository.findByUser(user).orElse(null);
+        // Update all fields from the request without null checks
+        user.setFirstName(request.firstName());
+        user.setMiddleName(request.middleName());
+        user.setLastName(request.lastName());
+        user.setAddressLine1(request.addressLine1());
+        user.setAddressLine2(request.addressLine2());
+        user.setAddressLine3(request.addressLine3());
+        user.setCity(request.cityName());
+        user.setZipCode(request.zipCode());
+        user.setProfilePicturePath(request.profilePicturePath());
+        user.setVolunteerStage(request.volunteerStage());
+        user.setVolunteerUpdateDate(request.volunteerUpdateDate());
+        user.setLastUpdateDate(ZonedDateTime.now(ZoneId.of("UTC")));
 
-        if (organization == null) {
-            organization = new Organization();
-            organization.setUser(user);
-        }
+        User updatedUser = userRepository.save(user);
 
-        if (request.organizationName() != null) organization.setOrganizationName(request.organizationName());
-        if (request.organizationType() != null) organization.setOrganizationType(request.organizationType());
-        if (request.phoneNumber() != null) organization.setPhoneNumber(request.phoneNumber());
-        if (request.email() != null) organization.setEmail(request.email());
-        if (request.url() != null) organization.setUrl(request.url());
-        if (request.streetAddress1() != null) organization.setStreetAddress1(request.streetAddress1());
-        if (request.streetAddress2() != null) organization.setStreetAddress2(request.streetAddress2());
-        if (request.city() != null) organization.setCity(request.city());
-        if (request.state() != null) organization.setState(request.state());
-        if (request.zipCode() != null) organization.setZipCode(request.zipCode());
-
-        organization.setLastUpdateDate(ZonedDateTime.now(ZoneId.of("UTC")));
-        Organization updatedOrganization = organizationRepository.save(organization);
-
-        return OrganizationResponse.builder()
-                .id(updatedOrganization.getId())
-                .organizationName(updatedOrganization.getOrganizationName())
-                .organizationType(updatedOrganization.getOrganizationType())
-                .phoneNumber(updatedOrganization.getPhoneNumber())
-                .email(updatedOrganization.getEmail())
-                .url(updatedOrganization.getUrl())
-                .streetAddress1(updatedOrganization.getStreetAddress1())
-                .streetAddress2(updatedOrganization.getStreetAddress2())
-                .city(updatedOrganization.getCity())
-                .state(updatedOrganization.getState())
-                .zipCode(updatedOrganization.getZipCode())
-                .build();
+        return mapToUserProfileResponse(updatedUser);
     }
 
-    @Override
-    public OrganizationResponse getOrganizationByUserId(String userId) {
-        Organization organization = organizationRepository.findByUserId(userId)
-                .orElseThrow(() -> new UserOrganizationNotFoundException(userId));
-
-        return OrganizationResponse.builder()
-                .id(organization.getId())
-                .organizationName(organization.getOrganizationName())
-                .organizationType(organization.getOrganizationType())
-                .phoneNumber(organization.getPhoneNumber())
-                .email(organization.getEmail())
-                .url(organization.getUrl())
-                .streetAddress1(organization.getStreetAddress1())
-                .streetAddress2(organization.getStreetAddress2())
-                .city(organization.getCity())
-                .state(organization.getState())
-                .zipCode(organization.getZipCode())
-                .build();
-    }
     // Profile Pic Upload
     // S3 URI <-> DB //
     @Override

@@ -11,6 +11,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.sfa.volunteer.dto.response.OrganizationResponse;
 import org.sfa.volunteer.repository.OrganizationRepository;
+import org.sfa.volunteer.repository.UserOrgMapRepository;
 import org.sfa.volunteer.service.impl.OrganizationServiceImpl;
 
 import java.util.Collections;
@@ -24,6 +25,9 @@ class OrganizationServiceImplTest {
 
     @Mock
     private OrganizationRepository organizationRepository;
+ 
+    @Mock
+    private UserOrgMapRepository userOrgMapRepository;
 
     @InjectMocks
     private OrganizationServiceImpl organizationService;

@@ -1,12 +1,16 @@
 package org.sfa.volunteer.service.impl;
 
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.stereotype.Service;
 import org.sfa.volunteer.dto.request.CreateOrganizationRequest;
 import org.sfa.volunteer.dto.response.OrganizationResponse;
+import org.sfa.volunteer.dto.response.OrganizationDetailsResponse;
 import org.sfa.volunteer.model.Organization;
+import org.sfa.volunteer.model.UserOrgMap;
 import org.sfa.volunteer.repository.OrganizationRepository;
+import org.sfa.volunteer.repository.UserOrgMapRepository;
 import org.sfa.volunteer.service.OrganizationService;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,10 +18,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 @Service
 public class OrganizationServiceImpl implements OrganizationService {
     private final OrganizationRepository organizationRepository;
+    private final UserOrgMapRepository userOrgMapRepository;
 
     @Autowired
-    public OrganizationServiceImpl(OrganizationRepository organizationRepository) {
+    public OrganizationServiceImpl(OrganizationRepository organizationRepository,
+                                   UserOrgMapRepository userOrgMapRepository) {
         this.organizationRepository = organizationRepository;
+        this.userOrgMapRepository = userOrgMapRepository;
     }
 
     @Override
@@ -26,6 +33,34 @@ public class OrganizationServiceImpl implements OrganizationService {
                 .stream()
                 .map(this::mapToResponse)
                 .toList();
+    }
+    
+    @Override
+    public List<OrganizationDetailsResponse> getOrganizationsByUserId(String userId) {
+        return userOrgMapRepository.findByUserId(userId)
+                .stream()
+                .map(UserOrgMap::getOrgId)
+                .map(organizationRepository::findById)
+                .flatMap(Optional::stream)
+                .map(this::mapToDetailsResponse)
+                .toList();
+    }
+
+    private OrganizationDetailsResponse mapToDetailsResponse(Organization org) {
+        return OrganizationDetailsResponse.builder()
+                .orgId(org.getOrgId())
+                .orgName(org.getOrgName())
+                .orgType(org.getOrgType())
+                .orgSize(org.getOrgSize())
+                .phone(org.getPhone())
+                .email(org.getEmail())
+                .webUrl(org.getWebUrl())
+                .street(org.getStreet())
+                .cityName(org.getCityName())
+                .stateId(org.getStateId())
+                .zipCode(org.getZipCode())
+                .mission(org.getMission())
+                .build();
     }
     @Override
     public OrganizationResponse createOrganization(CreateOrganizationRequest request) {

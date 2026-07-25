@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.sfa.volunteer.dto.response.OrganizationResponse;
 import org.sfa.volunteer.dto.common.SaayamResponse;
 import org.sfa.volunteer.dto.common.SaayamStatusCode;
+import org.sfa.volunteer.dto.response.OrganizationDetailsResponse;
 import org.sfa.volunteer.service.OrganizationService;
 import org.sfa.volunteer.util.ResponseBuilder;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -51,6 +52,12 @@ public class OrganizationController {
             @PathVariable String orgId) {
         UserOrgMap result = userOrgMapService.linkUserToOrg(userId, orgId);
         return responseBuilder.buildSuccessResponse(SaayamStatusCode.SUCCESS, result);
+    }
+    @GetMapping("/users/{userId}/organizations")
+    public SaayamResponse<List<OrganizationDetailsResponse>> getUserOrganizations(
+            @PathVariable String userId) {
+        List<OrganizationDetailsResponse> organizations = organizationService.getOrganizationsByUserId(userId);
+        return responseBuilder.buildSuccessResponse(SaayamStatusCode.SUCCESS, organizations);
     }
     @PostMapping
     public SaayamResponse<OrganizationResponse> createOrganization(

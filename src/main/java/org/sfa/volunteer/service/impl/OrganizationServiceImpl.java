@@ -3,6 +3,7 @@ package org.sfa.volunteer.service.impl;
 import java.util.List;
 import java.util.Optional;
 
+import org.sfa.volunteer.dto.common.SaayamStatusCode;
 import org.springframework.stereotype.Service;
 import org.sfa.volunteer.dto.request.CreateOrganizationRequest;
 import org.sfa.volunteer.dto.response.OrganizationResponse;
@@ -89,4 +90,21 @@ public class OrganizationServiceImpl implements OrganizationService {
                 .stateId(org.getStateId())
                 .build();
     }
+    @Override
+    public void linkOrganization(String userId, String orgId) {
+
+       Organization organization = organizationRepository.findById(orgId)
+            .orElseThrow(() ->
+                    new RuntimeException(
+                            SaayamStatusCode.ORGANIZATION_NOT_FOUND.name()
+                    )
+            );
+
+    UserOrgMap userOrgMap = UserOrgMap.builder()
+            .userId(userId)
+            .orgId(organization.getOrgId())
+            .build();
+
+    userOrgMapRepository.save(userOrgMap);
+   }
 }

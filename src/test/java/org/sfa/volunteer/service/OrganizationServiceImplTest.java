@@ -42,7 +42,7 @@ class OrganizationServiceImplTest {
         assertTrue(results.isEmpty());
     }
     @Test
-    void searchByName_CreateOrganizationRequest() {
+    void searchByName_returnsMatchingOrganizations() {
         Organization org = Organization.builder()
                 .orgId("ORG-00-000-000-001")
                 .orgName("Red Cross")
@@ -60,7 +60,7 @@ class OrganizationServiceImplTest {
         assertEquals("ORG-00-000-000-001", results.get(0).orgId());
     }
     @Test
-    void searchByName_returnsMatchingOrganizations() {
+    void createOrganization_returnsGeneratedOrgId() {
         CreateOrganizationRequest request = CreateOrganizationRequest.builder()
                 .orgName("Hope Shelter")
                 .cityName("Boston")
@@ -84,3 +84,4 @@ class OrganizationServiceImplTest {
         assertEquals("Hope Shelter", response.orgName());
     }
 }
+

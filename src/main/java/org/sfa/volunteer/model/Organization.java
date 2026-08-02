@@ -1,5 +1,6 @@
 package org.sfa.volunteer.model;
 
+import org.hibernate.annotations.ColumnTransformer;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -10,6 +11,8 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 @Entity
 @Table(name="organizations")
@@ -58,9 +61,10 @@ public class Organization {
     private String stateId;
 
     @Column(name = "org_type")
-    private String orgType;   // TODO: verify lowercase Postgres enum matching against real DB
+    @ColumnTransformer(write = "?::org_type_enum")
+    private String orgType;
 
     @Column(name = "org_size")
+    @ColumnTransformer(write = "?::org_size_enum")
     private String orgSize;
-
 }

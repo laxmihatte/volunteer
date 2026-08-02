@@ -3,6 +3,8 @@ package org.sfa.volunteer.service.impl;
 import java.util.List;
 import java.util.Optional;
 
+import org.sfa.volunteer.model.OrgType;
+import org.sfa.volunteer.model.OrgSize;
 import org.sfa.volunteer.dto.common.SaayamStatusCode;
 import org.springframework.stereotype.Service;
 import org.sfa.volunteer.dto.request.CreateOrganizationRequest;
@@ -103,6 +105,7 @@ public class OrganizationServiceImpl implements OrganizationService {
     UserOrgMap userOrgMap = UserOrgMap.builder()
             .userId(userId)
             .orgId(organization.getOrgId())
+            .userRole("VOLUNTEER")
             .build();
 
     userOrgMapRepository.save(userOrgMap);

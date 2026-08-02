@@ -15,6 +15,9 @@ import java.util.List;
 public interface VolunteerService {
 
     PaginationResponse<VolunteerResponse> findAllVolunteersWithPagination(Integer pageNumber, Integer pageSize);
+    
+
+    String getGovtIdPath(String userId, int documentSlot) throws Exception;
 
     VolunteerResponse createVolunteer(VolunteerRequest volunteerRequest) throws Exception;
 
@@ -39,4 +42,6 @@ public interface VolunteerService {
 //    UserVolunteerSkillsResponse updateSkills(UserVolunteerSkillsRequest request) throws Exception;
 
 //    UserVolunteerSkillsResponse findSkillsList() throws Exception;
+
+    void updateGovtIdPath(String userId, int documentSlot, String s3Path) throws Exception;
 }

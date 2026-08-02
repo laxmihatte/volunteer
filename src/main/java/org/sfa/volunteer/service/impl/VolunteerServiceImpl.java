@@ -1,5 +1,7 @@
 package org.sfa.volunteer.service.impl;
 
+import org.springframework.web.server.ResponseStatusException;
+import org.springframework.http.HttpStatus;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -306,6 +308,50 @@ public class VolunteerServiceImpl implements VolunteerService {
                     }
                 });
         return mapToVolunteerResponse(volunteer);
+    }
+    
+   @Override
+    public void updateGovtIdPath(String userId, int documentSlot, String s3Path) throws Exception {
+        // Validate before the lookup - an invalid slot shouldn't cost a query.
+        if (documentSlot != 1 && documentSlot != 2) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Document slot must be 1 or 2");
+        }
+
+        Volunteer volunteer = volunteerRepository.findById(userId).orElse(null);
+        if (volunteer == null) {
+            throw VolunteerException.volunteerNotFound(userId);
+        }
+
+        LocalDateTime now = LocalDateTime.now(ZoneId.of("UTC"));
+
+        if (documentSlot == 1) {
+            volunteer.setGovtIdPath1(s3Path);
+            volunteer.setPath1UpdatedAt(now);
+        } else {
+            volunteer.setGovtIdPath2(s3Path);
+            volunteer.setPath2UpdatedAt(now);
+        }
+
+        volunteerRepository.save(volunteer);
+    }
+
+    /**
+     * Returns the stored s3:// path for a slot, or null if nothing has been
+     * uploaded there yet. Callers rely on the null - it distinguishes an empty
+     * slot from a missing volunteer, which throws instead.
+     */
+    @Override
+    public String getGovtIdPath(String userId, int documentSlot) throws Exception {
+        if (documentSlot != 1 && documentSlot != 2) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Document slot must be 1 or 2");
+        }
+
+        Volunteer volunteer = volunteerRepository.findById(userId).orElse(null);
+        if (volunteer == null) {
+            throw VolunteerException.volunteerNotFound(userId);
+        }
+
+        return documentSlot == 1 ? volunteer.getGovtIdPath1() : volunteer.getGovtIdPath2();
     }
 
     @Override

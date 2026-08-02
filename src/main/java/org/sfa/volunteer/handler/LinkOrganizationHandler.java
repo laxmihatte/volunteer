@@ -15,6 +15,7 @@ import org.sfa.volunteer.util.MessageSourceUtil;
 import org.sfa.volunteer.util.ResponseBuilder;
 import org.springframework.boot.SpringApplication;
 import org.springframework.context.ApplicationContext;
+import org.sfa.volunteer.exception.OrganizationNotFoundException;
 
 import java.util.Map;
 import java.util.Optional;
@@ -104,38 +105,14 @@ public class LinkOrganizationHandler
             );
 
         } catch (IllegalArgumentException e) {
-            SaayamStatusCode statusCode =
-                    resolveStatusCode(e.getMessage());
-
-            int httpStatus =
-                    statusCode == SaayamStatusCode.ORGANIZATION_NOT_FOUND
-                            ? 404
-                            : 400;
-
-            setErrorResponse(
-                    response,
-                    httpStatus,
-                    statusCode
-            );
-
+            setErrorResponse(response, 400, SaayamStatusCode.BAD_REQUEST);
+        } catch (OrganizationNotFoundException e) {
+            setErrorResponse(response, 404, SaayamStatusCode.ORGANIZATION_NOT_FOUND);
         } catch (Exception e) {
-            setErrorResponse(
-                    response,
-                    500,
-                    SaayamStatusCode.INTERNAL_SERVER_ERROR
-            );
+            setErrorResponse(response, 500, SaayamStatusCode.INTERNAL_SERVER_ERROR);
         }
 
         return response;
-    }
-
-    private SaayamStatusCode resolveStatusCode(String message) {
-        if (SaayamStatusCode.ORGANIZATION_NOT_FOUND.name()
-                .equals(message)) {
-            return SaayamStatusCode.ORGANIZATION_NOT_FOUND;
-        }
-
-        return SaayamStatusCode.BAD_REQUEST;
     }
 
     private void setErrorResponse(

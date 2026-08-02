@@ -3,6 +3,7 @@ package org.sfa.volunteer.service.impl;
 import java.util.List;
 import java.util.Optional;
 
+import org.sfa.volunteer.exception.OrganizationNotFoundException;
 import org.sfa.volunteer.model.OrgType;
 import org.sfa.volunteer.model.OrgSize;
 import org.sfa.volunteer.dto.common.SaayamStatusCode;
@@ -96,11 +97,7 @@ public class OrganizationServiceImpl implements OrganizationService {
     public void linkOrganization(String userId, String orgId) {
 
        Organization organization = organizationRepository.findById(orgId)
-            .orElseThrow(() ->
-                    new RuntimeException(
-                            SaayamStatusCode.ORGANIZATION_NOT_FOUND.name()
-                    )
-            );
+        .orElseThrow(() -> new OrganizationNotFoundException(orgId));
 
     UserOrgMap userOrgMap = UserOrgMap.builder()
             .userId(userId)

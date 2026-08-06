@@ -5,7 +5,7 @@ import org.sfa.volunteer.dto.request.UpdateOrganizationRequest;
 import org.sfa.volunteer.dto.request.UpdateUserProfileRequest;
 
 import org.sfa.volunteer.dto.response.*;
-
+import org.springframework.stereotype.Service;
 
 public interface UserService {
 
@@ -34,7 +34,10 @@ public interface UserService {
     // Profile Pic Upload
     // AWS (S3 URI <-> DB)
     void setProfilePicturePath(String userId, String s3Uri);
+
     java.util.Optional<String> getProfilePicturePath(String userId);
+
     boolean userExists(String userId);
+
     String getUserIdByEmailForAuth(String email);
 }

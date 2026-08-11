@@ -56,20 +56,26 @@ public class OrganizationServiceImpl implements OrganizationService {
     }
 
     private OrganizationDetailsResponse mapToDetailsResponse(Organization org) {
-        return OrganizationDetailsResponse.builder()
-                .orgId(org.getOrgId())
-                .orgName(org.getOrgName())
-                .orgType(org.getOrgType())
-                .orgSize(org.getOrgSize())
-                .phone(org.getPhone())
-                .email(org.getEmail())
-                .webUrl(org.getWebUrl())
-                .street(org.getStreet())
-                .cityName(org.getCityName())
-                .stateId(org.getStateId())
-                .zipCode(org.getZipCode())
-                .mission(org.getMission())
-                .build();
+        List<String> categoryIds = orgSkillRepository.findByOrgId(org.getOrgId())
+            .stream()
+            .map(OrgSkill::getCatId)
+            .toList();
+
+       return OrganizationDetailsResponse.builder()
+            .orgId(org.getOrgId())
+            .orgName(org.getOrgName())
+            .orgType(org.getOrgType())
+            .orgSize(org.getOrgSize())
+            .phone(org.getPhone())
+            .email(org.getEmail())
+            .webUrl(org.getWebUrl())
+            .street(org.getStreet())
+            .cityName(org.getCityName())
+            .stateId(org.getStateId())
+            .zipCode(org.getZipCode())
+            .mission(org.getMission())
+            .categoryIds(categoryIds)
+            .build();
     }
     @Override
     public OrganizationResponse createOrganization(CreateOrganizationRequest request) {

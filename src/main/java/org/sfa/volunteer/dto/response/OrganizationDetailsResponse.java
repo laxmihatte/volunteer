@@ -1,5 +1,6 @@
 package org.sfa.volunteer.dto.response;
 
+import java.util.List;
 import lombok.Builder;
 
 @Builder
@@ -15,6 +16,7 @@ public record OrganizationDetailsResponse(
         String cityName,
         String stateId,
         String zipCode,
-        String mission
+        String mission,
+        List<String> categoryIds
 ) {
 }

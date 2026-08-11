@@ -17,6 +17,7 @@ import org.sfa.volunteer.util.MessageSourceUtil;
 import org.sfa.volunteer.util.ResponseBuilder;
 import org.springframework.boot.SpringApplication;
 import org.springframework.context.ApplicationContext;
+import jakarta.validation.Validator;
 
 public class CreateOrganizationHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -24,6 +25,7 @@ public class CreateOrganizationHandler
     private static final OrganizationService organizationService;
     private static final ResponseBuilder responseBuilder;
     private static final MessageSourceUtil messageSourceUtil;
+    private static final Validator validator;
 
     private static final ObjectMapper objectMapper = new ObjectMapper()
             .registerModule(new JavaTimeModule())
@@ -33,14 +35,13 @@ public class CreateOrganizationHandler
         ApplicationContext applicationContext =
                 SpringApplication.run(VolunteerApplication.class);
 
-        organizationService =
-                applicationContext.getBean(OrganizationService.class);
+        organizationService = applicationContext.getBean(OrganizationService.class);
 
-        responseBuilder =
-                applicationContext.getBean(ResponseBuilder.class);
+        responseBuilder = applicationContext.getBean(ResponseBuilder.class);
 
-        messageSourceUtil =
-                applicationContext.getBean(MessageSourceUtil.class);
+        messageSourceUtil = applicationContext.getBean(MessageSourceUtil.class);
+        
+       validator = applicationContext.getBean(Validator.class);
     }
 
     @Override
@@ -64,9 +65,15 @@ public class CreateOrganizationHandler
                             requestEvent.getBody(),
                             CreateOrganizationRequest.class
                     );
+            var violations = validator.validate(createRequest);
+            if (!violations.isEmpty()) {
+                String errorMessage = violations.stream()
+                        .map(v -> v.getMessage())
+                        .collect(java.util.stream.Collectors.joining("; "));
+                throw new IllegalArgumentException(errorMessage);
+             }
 
-            OrganizationResponse createdOrganization =
-                    organizationService.createOrganization(createRequest);
+            OrganizationResponse createdOrganization = organizationService.createOrganization(createRequest);
 
             SaayamResponse<OrganizationResponse> successResponse =
                     responseBuilder.buildSuccessResponse(

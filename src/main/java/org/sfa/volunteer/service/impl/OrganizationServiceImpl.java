@@ -9,6 +9,7 @@ import org.sfa.volunteer.model.OrgSize;
 import org.sfa.volunteer.dto.common.SaayamStatusCode;
 import org.springframework.stereotype.Service;
 import org.sfa.volunteer.dto.request.CreateOrganizationRequest;
+import org.sfa.volunteer.dto.request.UpdateOrganizationRequest;
 import org.sfa.volunteer.dto.response.OrganizationResponse;
 import org.sfa.volunteer.dto.response.OrganizationDetailsResponse;
 import org.sfa.volunteer.model.Organization;
@@ -107,4 +108,25 @@ public class OrganizationServiceImpl implements OrganizationService {
 
     userOrgMapRepository.save(userOrgMap);
    }
+   @Override
+   public OrganizationDetailsResponse updateOrganization(String orgId, UpdateOrganizationRequest request) {
+    Organization organization = organizationRepository.findById(orgId)
+            .orElseThrow(() -> new OrganizationNotFoundException(orgId));
+
+    organization.setOrgName(request.orgName());
+    organization.setOrgType(request.orgType() == null ? null
+            : OrgType.fromString(request.orgType()).getDbValue());
+    organization.setOrgSize(request.orgSize() == null ? null
+            : OrgSize.fromString(request.orgSize()).getDbValue());
+    organization.setStreet(request.street());
+    organization.setCityName(request.cityName());
+    organization.setStateId(request.stateId());
+    organization.setZipCode(request.zipCode());
+    organization.setPhone(request.phone());
+    organization.setEmail(request.email());
+    organization.setWebUrl(request.webUrl());
+    organization.setMission(request.mission());
+
+    return mapToDetailsResponse(organizationRepository.save(organization));
+   } 
 }

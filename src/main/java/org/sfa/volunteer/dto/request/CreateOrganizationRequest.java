@@ -1,5 +1,6 @@
 package org.sfa.volunteer.dto.request;
 
+import java.util.List;
 import jakarta.validation.constraints.Size;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Email;
@@ -26,5 +27,6 @@ public record CreateOrganizationRequest(
         String email,
         @URL(message = "Invalid URL")
         String webUrl,
-        String mission
+        String mission,
+        List<String> categoryIds
 ) {}

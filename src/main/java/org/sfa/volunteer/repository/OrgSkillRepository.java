@@ -10,4 +10,5 @@ import java.util.List;
 @Repository
 public interface OrgSkillRepository extends JpaRepository<OrgSkill, OrgSkillId> {
     List<OrgSkill> findByOrgId(String orgId);
+    void deleteByOrgId(String orgId);
 }

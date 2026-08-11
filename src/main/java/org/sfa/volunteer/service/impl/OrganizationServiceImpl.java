@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Optional;
 
 import org.sfa.volunteer.exception.OrganizationNotFoundException;
+import org.sfa.volunteer.model.OrgSkill;
 import org.sfa.volunteer.model.OrgType;
 import org.sfa.volunteer.model.OrgSize;
 import org.sfa.volunteer.dto.common.SaayamStatusCode;
@@ -14,6 +15,7 @@ import org.sfa.volunteer.dto.response.OrganizationResponse;
 import org.sfa.volunteer.dto.response.OrganizationDetailsResponse;
 import org.sfa.volunteer.model.Organization;
 import org.sfa.volunteer.model.UserOrgMap;
+import org.sfa.volunteer.repository.OrgSkillRepository;
 import org.sfa.volunteer.repository.OrganizationRepository;
 import org.sfa.volunteer.repository.UserOrgMapRepository;
 import org.sfa.volunteer.service.OrganizationService;
@@ -24,12 +26,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 public class OrganizationServiceImpl implements OrganizationService {
     private final OrganizationRepository organizationRepository;
     private final UserOrgMapRepository userOrgMapRepository;
+    private final OrgSkillRepository orgSkillRepository;
 
     @Autowired
     public OrganizationServiceImpl(OrganizationRepository organizationRepository,
-                                   UserOrgMapRepository userOrgMapRepository) {
+                                   UserOrgMapRepository userOrgMapRepository, OrgSkillRepository orgSkillRepository) {
         this.organizationRepository = organizationRepository;
         this.userOrgMapRepository = userOrgMapRepository;
+        this. orgSkillRepository = orgSkillRepository;
     }
 
     @Override
@@ -84,7 +88,18 @@ public class OrganizationServiceImpl implements OrganizationService {
                 .build();
 
         Organization saved = organizationRepository.save(organization);
-        return mapToResponse(saved);
+
+       if (request.categoryIds() != null) {
+            List<OrgSkill> orgSkills = request.categoryIds().stream()
+                     .map(catId -> OrgSkill.builder()
+                             .orgId(saved.getOrgId())
+                             .catId(catId)
+                             .build())
+                    .toList();
+            orgSkillRepository.saveAll(orgSkills);
+       }
+
+       return mapToResponse(saved);
     }
     private OrganizationResponse mapToResponse(Organization org) {
         return OrganizationResponse.builder()
@@ -126,7 +141,17 @@ public class OrganizationServiceImpl implements OrganizationService {
     organization.setEmail(request.email());
     organization.setWebUrl(request.webUrl());
     organization.setMission(request.mission());
-
+   
+    if (request.categoryIds() != null) {
+        orgSkillRepository.deleteByOrgId(orgId);
+        List<OrgSkill> orgSkills = request.categoryIds().stream()
+                .map(catId -> OrgSkill.builder()
+                       .orgId(orgId)
+                       .catId(catId)
+                       .build())
+               .toList();
+       orgSkillRepository.saveAll(orgSkills);
+   }
     return mapToDetailsResponse(organizationRepository.save(organization));
    } 
 }

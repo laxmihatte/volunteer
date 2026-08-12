@@ -3,17 +3,21 @@ package org.sfa.volunteer.service.impl;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.List;
+import java.util.function.Supplier;
 
+import org.sfa.volunteer.dto.common.SaayamStatusCode;
 import org.sfa.volunteer.dto.request.GetNotificationsRequest;
 import org.sfa.volunteer.dto.request.UpsertLastSeenRequest;
 import org.sfa.volunteer.dto.response.GetNotificationsResponse;
 import org.sfa.volunteer.dto.response.NotificationResponse;
 import org.sfa.volunteer.dto.response.UpsertLastSeenResponse;
 import org.sfa.volunteer.enums.StatusType;
+import org.sfa.volunteer.exception.NotificationException;
 import org.sfa.volunteer.exception.UserNotFoundException;
 import org.sfa.volunteer.repository.NotificationsRepository;
 import org.sfa.volunteer.repository.UserNotificationStatusRepository;
 import org.sfa.volunteer.service.NotificationService;
+import org.springframework.dao.DataAccessException;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -41,10 +45,12 @@ public class NotificationServiceImpl implements NotificationService {
         int totalNewNotificationsCount = 0;
 
         // 1. Count total notifications
-        int totalNotificationsCount = notificationsRepo.countAllNotifications(userId);
+        int totalNotificationsCount = handleException(userId,
+                () -> notificationsRepo.countAllNotifications(userId));
 
         // 2. Query watermark table for userId
-        Timestamp watermarkTs = userNtfStatusRepo.getLastSeenTimestamp(userId);
+        Timestamp watermarkTs = handleException(userId,
+                () -> userNtfStatusRepo.getLastSeenTimestamp(userId));
 
         // If watermark is null → user has never seen/read notifications
         if (watermarkTs == null) {
@@ -52,12 +58,12 @@ public class NotificationServiceImpl implements NotificationService {
             totalNewNotificationsCount = totalNotificationsCount;
         } else {
             // 3. Count new notifications (ntf.createDttm > watermarkTimestamp)
-            totalNewNotificationsCount = notificationsRepo.countNewNotifications(userId, watermarkTs);
+            totalNewNotificationsCount = handleException(userId,
+                    () -> notificationsRepo.countNewNotifications(userId, watermarkTs));
         }
 
         // return only the counts with blank/null notifications data
         return GetNotificationsResponse.builder()
-                .notifications(null)
                 .totalCount(totalNotificationsCount)
                 .newNotificationsCount(totalNewNotificationsCount)
                 .build();
@@ -72,14 +78,16 @@ public class NotificationServiceImpl implements NotificationService {
         int rowEnd = request.rowEnd();
 
         // // 1. Get watermark timestamp (last seen)
-        Timestamp lastSeen = userNtfStatusRepo.getLastSeenTimestamp(userId);
+        Timestamp lastSeen = handleException(userId,
+                () -> userNtfStatusRepo.getLastSeenTimestamp(userId));
         final Timestamp watermarkTs = (lastSeen != null) ? lastSeen : Timestamp.from(Instant.now());
 
         // 2. Fetch paginated notifications sorted by createDttm DESC
         int limit = rowEnd - rowStart + 1; // number of records per page
         int offset = rowStart;
         Pageable pageable = PageRequest.of(offset, limit);
-        List<NotificationResponse> notifications = notificationsRepo.findNotifications(userId, pageable);
+        List<NotificationResponse> notifications = handleException(userId,
+                () -> notificationsRepo.findNotifications(userId, pageable));
 
         // 3. Override status field with "new" or "old"
         List<NotificationResponse> items = notifications.stream()
@@ -97,8 +105,10 @@ public class NotificationServiceImpl implements NotificationService {
                 .toList();
 
         // 3. Count totals
-        int totalCount = notificationsRepo.countAllNotifications(userId);
-        int newNotificationsCount = notificationsRepo.countNewNotifications(userId, watermarkTs);
+        int totalCount = handleException(userId,
+                () -> notificationsRepo.countAllNotifications(userId));
+        int newNotificationsCount = handleException(userId,
+                () -> notificationsRepo.countNewNotifications(userId, watermarkTs));
 
         // 5. Return final response
         return GetNotificationsResponse.builder()
@@ -106,7 +116,6 @@ public class NotificationServiceImpl implements NotificationService {
                 .totalCount(totalCount)
                 .newNotificationsCount(newNotificationsCount)
                 .build();
-
     }
 
     @Transactional
@@ -126,19 +135,38 @@ public class NotificationServiceImpl implements NotificationService {
         // format it to Timestamp
         Timestamp watermarkTs = Timestamp.from(timeGMT);
 
-        // TODO Fault handling
-        if (userNtfStatusRepo.existsByUserId(userId) == 0) {
-            rowCreated = userNtfStatusRepo.createLastSeenTimestamp(userId, watermarkTs) > 0;
-        } else {
-            rowUpdated = userNtfStatusRepo.updateLastSeenTimestamp(userId, watermarkTs) > 0;
-        }
+        // 3. Check if user exists (wrapped in handleException)
+        int exists = handleException(userId,
+                () -> userNtfStatusRepo.existsByUserId(userId));
 
+        // 4. Insert or update (wrapped in handleException)
+        if (exists == 0) {
+            rowCreated = handleException(userId,
+                    () -> userNtfStatusRepo.createLastSeenTimestamp(userId, watermarkTs) > 0);
+        } else {
+            rowUpdated = handleException(userId,
+                    () -> userNtfStatusRepo.updateLastSeenTimestamp(userId, watermarkTs) > 0);
+        }
         // TODO
         return UpsertLastSeenResponse.builder()
                 .created(rowCreated)
                 .updated(rowUpdated)
                 .message(rowCreated ? "Created" : rowUpdated ? "Updated" : "failed")
                 .build();
+    }
+
+    private <T> T handleException(String userId, Supplier<T> action) {
+        try {
+            return action.get();
+        } catch (DataAccessException ex) {
+            throw new NotificationException(
+                    SaayamStatusCode.DATABASE_ERROR.toString(),
+                    userId);
+        } catch (RuntimeException ex) {
+            throw new NotificationException(
+                    SaayamStatusCode.UNEXPECTED_ERROR.toString(),
+                    userId);
+        }
     }
 
 }

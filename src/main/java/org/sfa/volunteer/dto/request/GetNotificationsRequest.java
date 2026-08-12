@@ -5,7 +5,7 @@ import lombok.Builder;
 
 @Builder
 public record GetNotificationsRequest(
-                @NotBlank String userId,
-                int rowStart,
-                int rowEnd) {
+        @NotBlank String userId,
+        Integer rowStart,
+        Integer rowEnd) {
 }

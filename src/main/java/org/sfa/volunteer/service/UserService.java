@@ -2,13 +2,18 @@ package org.sfa.volunteer.service;
 
 import org.sfa.volunteer.dto.request.CreateUserRequest;
 import org.sfa.volunteer.dto.request.UpdateUserProfileRequest;
-
+import org.sfa.volunteer.dto.request.UserPreferenceRequest;
+import org.sfa.volunteer.dto.response.UserPreferenceResponse;
 import org.sfa.volunteer.dto.response.*;
-
+import org.springframework.stereotype.Service;
 
 public interface UserService {
 
     PaginationResponse<UserProfileResponse> findAllUsersWithPagination(Integer pageNumber, Integer pageSize);
+
+    PaginationResponse<UserProfileResponse> searchUsers(String query, Integer pageNumber, Integer pageSize);
+
+    boolean isAdminUser(String userId);
 
     UserProfileResponse getUserProfileById(String userId);
 
@@ -30,7 +35,12 @@ public interface UserService {
     // Profile Pic Upload
     // AWS (S3 URI <-> DB)
     void setProfilePicturePath(String userId, String s3Uri);
+
     java.util.Optional<String> getProfilePicturePath(String userId);
+
     boolean userExists(String userId);
+
     String getUserIdByEmailForAuth(String email);
+
+    UserPreferenceResponse updateUserPreferences(String userId, UserPreferenceRequest request) throws Exception;
 }

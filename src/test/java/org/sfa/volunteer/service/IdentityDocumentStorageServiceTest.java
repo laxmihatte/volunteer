@@ -41,7 +41,10 @@ class IdentityDocumentStorageServiceTest {
         ReflectionTestUtils.setField(service, "euBucket", "test-bucket-eu");
         ReflectionTestUtils.setField(service, "usBucket", "test-bucket-us");
 
-        byte[] pngBytes = new byte[]{(byte) 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A};
+        byte[] pngBytes = new byte[]{
+            (byte) 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A,  // PNG signature
+             0x00, 0x00, 0x00, 0x00                                    // padding to reach 12 bytes
+        };
         validBase64 = Base64.getEncoder().encodeToString(pngBytes);
         futureDate = LocalDate.now().plusDays(90);
     }
@@ -58,6 +61,19 @@ class IdentityDocumentStorageServiceTest {
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
                 () -> service.uploadBase64("SID-001", 1, "passport.png", validBase64,
                         LocalDate.now().minusDays(1), "us-east-1"));
+        assertEquals(BAD_REQUEST, ex.getStatusCode());
+    }
+
+    @Test
+    void rejectsUnsupportedFileType() {
+        byte[] gifBytes = new byte[]{
+            'G', 'I', 'F', '8', '9', 'a',
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00   // pad past the 12-byte minimum
+        };
+        String badBase64 = Base64.getEncoder().encodeToString(gifBytes);
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> service.uploadBase64("SID-001", 1, "sneaky.png", badBase64, futureDate, "us-east-1"));
         assertEquals(BAD_REQUEST, ex.getStatusCode());
     }
 

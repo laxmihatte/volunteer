@@ -132,10 +132,12 @@ public class IdentityDocumentStorageService {
                      HttpStatus.INTERNAL_SERVER_ERROR, "Could not save identity document record", e);
        }
 
-        // TODO(#118): persist documentName and expiresOn once the database team
-        // confirms where they live - new columns on the volunteer record, or a
-        // separate table. Until then they are validated and echoed back but not
-        // stored, so the page cannot yet render the expiry banner.
+       try {
+            volunteerService.updateGovtIdMetadata(userId, documentSlot, safeName, expiresOn);
+        } catch (Exception e) {
+            throw new ResponseStatusException(
+                    HttpStatus.INTERNAL_SERVER_ERROR, "Could not save identity document metadata", e);
+        }
 
         return Map.of(
                 "message", "Identity document uploaded",

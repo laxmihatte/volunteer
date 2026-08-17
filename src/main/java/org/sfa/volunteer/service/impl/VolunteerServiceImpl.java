@@ -25,7 +25,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
-
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
@@ -352,6 +352,27 @@ public class VolunteerServiceImpl implements VolunteerService {
         }
 
         return documentSlot == 1 ? volunteer.getGovtIdPath1() : volunteer.getGovtIdPath2();
+    }
+    
+    public void updateGovtIdMetadata(String userId, int documentSlot, String documentName, LocalDate expiresOn) throws Exception {
+        if (documentSlot != 1 && documentSlot != 2) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Document slot must be 1 or 2");
+        }
+
+       Volunteer volunteer = volunteerRepository.findById(userId).orElse(null);
+       if (volunteer == null) {
+           throw VolunteerException.volunteerNotFound(userId);
+       }
+
+       if (documentSlot == 1) {
+           volunteer.setGovtIdName1(documentName);
+           volunteer.setGovtIdExpiry1(expiresOn);
+       } else {
+           volunteer.setGovtIdName2(documentName);
+           volunteer.setGovtIdExpiry2(expiresOn);
+       }
+
+       volunteerRepository.save(volunteer);
     }
 
     @Override

@@ -5,6 +5,7 @@ import org.sfa.volunteer.dto.request.VolunteerUserAvailabilityRequest;
 import org.sfa.volunteer.dto.response.VolunteerResponse;
 import org.sfa.volunteer.dto.response.PaginationResponse;
 import org.sfa.volunteer.dto.response.VolunteerUserAvailabilityResponse;
+import java.time.LocalDate;
 
 //import org.sfa.volunteer.dto.request.UserVolunteerSkillsRequest;
 //import org.sfa.volunteer.dto.response.UserVolunteerSkillsResponse;
@@ -44,4 +45,6 @@ public interface VolunteerService {
 //    UserVolunteerSkillsResponse findSkillsList() throws Exception;
 
     void updateGovtIdPath(String userId, int documentSlot, String s3Path) throws Exception;
+    
+   void updateGovtIdMetadata(String userId, int documentSlot, String documentName, LocalDate expiresOn) throws Exception;
 }

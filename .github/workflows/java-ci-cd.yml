@@ -60,14 +60,26 @@ jobs:
             echo "SONAR_TOKEN secret is not set. Skipping SonarQube SAST scan."
           fi
 
-      # 5. CODE COVERAGE (90% Threshold Enforcement & Feedback Loop)
-      # - name: CODE COVERAGE (Verify 90% Jacoco Gate)
-      #   shell: bash
-      #   run: |
-      #     echo "Verifying 90% Jacoco Code Coverage Threshold..."
-      #     if [ "${{ github.ref_name }}" = "dev" ] || [ "${{ github.ref_name }}" = "main" ]; then
-      #       mvn jacoco:check -Djacoco.haltOnFailure=true || (echo "Coverage below 90%. Halting pipeline -> Returning to CODE stage." && exit 1)
-      #     fi
+      # 5. CODE COVERAGE (Warning Only with Dynamic Percentage Check)
+      - name: CODE COVERAGE (Verify 90% Jacoco Gate - Warning Only)
+        shell: bash
+        run: |
+          echo "Checking Jacoco Code Coverage..."
+          # Run maven test / report if report doesn't exist yet
+          mvn jacoco:report || true
+
+          # Check if JaCoCo CSV report exists to compute instruction coverage percentage
+          CSV_REPORT="target/site/jacoco/jacoco.csv"
+          if [ -f "$CSV_REPORT" ]; then
+            # Parse instructions covered vs missed from JaCoCo CSV (Columns: INSTRUCTION_MISSED, INSTRUCTION_COVERED)
+            # Formula: (Covered / (Missed + Covered)) * 100
+            STATS=$(awk -F, 'NR>1 {missed+=$4; covered+=$5} END { if (missed+covered > 0) printf "%.2f", (covered/(missed+covered))*100; else print "0" }' "$CSV_REPORT")
+            echo "📊 Current Code Coverage is: ${STATS}%"
+          else
+            echo "⚠️ Jacoco CSV report not found at $CSV_REPORT. Running standard check..."
+          fi
+
+          mvn jacoco:check || echo "⚠️ Warning: Coverage is below the target threshold, but proceeding with the pipeline."
 
       # 6. BUILD DOCKER IMAGE AND PUSH
       - name: BUILD DOCKER IMAGE AND PUSH

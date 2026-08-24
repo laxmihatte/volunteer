@@ -4,7 +4,7 @@ on:
   push:
     branches: ["dev", "test", "main"]
   pull_request:
-    branches: ["dev", "main"]
+    branches: ["dev", "test", "main"]
   workflow_dispatch:
 
 env:
@@ -14,7 +14,7 @@ env:
 
 jobs:
   dev-stage-pipeline:
-    name: DEV Stage Execution
+    name: Build & Test (CI)
     runs-on: ubuntu-latest
 
     steps:
@@ -65,14 +65,10 @@ jobs:
         shell: bash
         run: |
           echo "Checking Jacoco Code Coverage..."
-          # Run maven test / report if report doesn't exist yet
           mvn jacoco:report || true
 
-          # Check if JaCoCo CSV report exists to compute instruction coverage percentage
           CSV_REPORT="target/site/jacoco/jacoco.csv"
           if [ -f "$CSV_REPORT" ]; then
-            # Parse instructions covered vs missed from JaCoCo CSV (Columns: INSTRUCTION_MISSED, INSTRUCTION_COVERED)
-            # Formula: (Covered / (Missed + Covered)) * 100
             STATS=$(awk -F, 'NR>1 {missed+=$4; covered+=$5} END { if (missed+covered > 0) printf "%.2f", (covered/(missed+covered))*100; else print "0" }' "$CSV_REPORT")
             echo "📊 Current Code Coverage is: ${STATS}%"
           else
@@ -81,14 +77,35 @@ jobs:
 
           mvn jacoco:check || echo "⚠️ Warning: Coverage is below the target threshold, but proceeding with the pipeline."
 
-      # 6. BUILD DOCKER IMAGE AND PUSH
-      - name: BUILD DOCKER IMAGE AND PUSH
+      # 6. BUILD DOCKER IMAGE
+      - name: BUILD DOCKER IMAGE
         run: |
           echo "Building Docker Image: ${{ env.APP_NAME }}:${{ github.sha }}"
           # docker build -t ${{ env.APP_NAME }}:${{ github.sha }} .
-          # docker push ${{ env.APP_NAME }}:${{ github.sha }}
 
-      # 7. AWS S3 Private Bucket Upload
+      # 7. Upload Build Artifact for Deployment Job
+      - name: Upload Build Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: compiled-build-archive
+          path: target/*.jar
+
+  deploy:
+    name: Deploy to AWS S3
+    needs: dev-stage-pipeline
+    if: github.event_name == 'push' && (github.ref_name == 'dev' || github.ref_name == 'test' || github.ref_name == 'main')
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download Build Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: compiled-build-archive
+          path: target/
+
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:

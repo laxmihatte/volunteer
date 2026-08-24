@@ -1,4 +1,4 @@
-name: DevSecOps Pipeline - DEV Stage
+name: Java CI/CD Pipeline - DEV Stage
 
 on:
   push:
@@ -48,14 +48,17 @@ jobs:
         run: mvn test
 
       - name: TEST [SAST] (SonarQube Security Scan)
-        if: ${{ secrets.SONAR_TOKEN != '' }}
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
         run: |
-          mvn sonar:sonar \
-            -Dsonar.projectKey=saayam-volunteer-service \
-            -Dsonar.branch.name=${{ github.ref_name }}
+          if [ -n "$SONAR_TOKEN" ]; then
+            mvn sonar:sonar \
+              -Dsonar.projectKey=saayam-volunteer-service \
+              -Dsonar.branch.name=${{ github.ref_name }}
+          else
+            echo "SONAR_TOKEN secret is not set. Skipping SonarQube SAST scan."
+          fi
 
       # 5. CODE COVERAGE (90% Threshold Enforcement & Feedback Loop)
       - name: CODE COVERAGE (Verify 90% Jacoco Gate)

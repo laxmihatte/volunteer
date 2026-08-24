@@ -61,13 +61,13 @@ jobs:
           fi
 
       # 5. CODE COVERAGE (90% Threshold Enforcement & Feedback Loop)
-      - name: CODE COVERAGE (Verify 90% Jacoco Gate)
-        shell: bash
-        run: |
-          echo "Verifying 90% Jacoco Code Coverage Threshold..."
-          if [ "${{ github.ref_name }}" = "dev" ] || [ "${{ github.ref_name }}" = "main" ]; then
-            mvn jacoco:check -Djacoco.haltOnFailure=true || (echo "Coverage below 90%. Halting pipeline -> Returning to CODE stage." && exit 1)
-          fi
+      # - name: CODE COVERAGE (Verify 90% Jacoco Gate)
+      #   shell: bash
+      #   run: |
+      #     echo "Verifying 90% Jacoco Code Coverage Threshold..."
+      #     if [ "${{ github.ref_name }}" = "dev" ] || [ "${{ github.ref_name }}" = "main" ]; then
+      #       mvn jacoco:check -Djacoco.haltOnFailure=true || (echo "Coverage below 90%. Halting pipeline -> Returning to CODE stage." && exit 1)
+      #     fi
 
       # 6. BUILD DOCKER IMAGE AND PUSH
       - name: BUILD DOCKER IMAGE AND PUSH

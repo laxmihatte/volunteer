@@ -14,7 +14,7 @@ env:
 
 jobs:
   dev-stage-pipeline:
-    name: Build & Test (CI)
+    name: Build, Test & QA (Test Stage)
     runs-on: ubuntu-latest
 
     steps:

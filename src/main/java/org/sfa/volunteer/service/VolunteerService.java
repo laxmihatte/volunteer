@@ -5,6 +5,7 @@ import org.sfa.volunteer.dto.request.VolunteerUserAvailabilityRequest;
 import org.sfa.volunteer.dto.response.VolunteerResponse;
 import org.sfa.volunteer.dto.response.PaginationResponse;
 import org.sfa.volunteer.dto.response.VolunteerUserAvailabilityResponse;
+import org.sfa.volunteer.dto.response.IdentityDocumentMetadata;
 import java.time.LocalDate;
 
 //import org.sfa.volunteer.dto.request.UserVolunteerSkillsRequest;
@@ -35,6 +36,8 @@ public interface VolunteerService {
     VolunteerResponse updateVolunteerCompletion(VolunteerRequest volunteerRequest) throws Exception;
 
     VolunteerResponse getVolunteerByUserId(String userId) throws Exception;
+    
+    IdentityDocumentMetadata getIdentityDocumentMetadata(String userId, int documentSlot) throws Exception;
 
     List<VolunteerUserAvailabilityResponse> updateVolunteerUserAvailability(String userId, List<VolunteerUserAvailabilityRequest> request) throws Exception;
 

@@ -13,12 +13,14 @@ import org.sfa.volunteer.dto.response.VolunteerResponse;
 import org.sfa.volunteer.dto.response.VolunteerUserAvailabilityResponse;
 import org.sfa.volunteer.exception.UserNotFoundException;
 import org.sfa.volunteer.exception.VolunteerException;
+import org.sfa.volunteer.model.DocumentStatus;
 import org.sfa.volunteer.model.User;
 import org.sfa.volunteer.model.Volunteer;
 import org.sfa.volunteer.model.VolunteerUserAvailability;
 import org.sfa.volunteer.repository.UserRepository;
 import org.sfa.volunteer.repository.VolunteerRepository;
 import org.sfa.volunteer.repository.VolunteerUserAvailabilityRepository;
+import org.sfa.volunteer.dto.response.IdentityDocumentMetadata;
 import org.sfa.volunteer.service.VolunteerService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -150,6 +152,27 @@ public class VolunteerServiceImpl implements VolunteerService {
         updateUser(user, request.step());
 
         return mapToVolunteerResponse(volunteer);
+    }
+    
+    public IdentityDocumentMetadata getIdentityDocumentMetadata(String userId, int documentSlot) throws Exception {
+       if (documentSlot != 1 && documentSlot != 2) {
+          throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Document slot must be 1 or 2");
+       }
+
+      Volunteer volunteer = volunteerRepository.findById(userId).orElse(null);
+      if (volunteer == null) {
+         throw VolunteerException.volunteerNotFound(userId);
+      }
+
+      String name = (documentSlot == 1) ? volunteer.getGovtIdName1() : volunteer.getGovtIdName2();
+      LocalDate expiry = (documentSlot == 1) ? volunteer.getGovtIdExpiry1() : volunteer.getGovtIdExpiry2();
+
+       if (expiry == null) {
+           return null;   // no document / no expiry recorded for this slot
+       }
+
+       DocumentStatus status = DocumentStatus.from(expiry);
+       return new IdentityDocumentMetadata(name, expiry, status);
     }
 
     @Override

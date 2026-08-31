@@ -70,7 +70,9 @@ jobs:
   deploy:
     name: Deploy to AWS S3 & E2E Testing
     needs: build-and-test
-    if: github.event_name == 'push' && (github.ref_name == 'dev' || github.ref_name == 'test' || github.ref_name == 'main')
+    if: >
+      (github.event_name == 'push' && (github.ref_name == 'dev' || github.ref_name == 'test' || github.ref_name == 'main')) ||
+      (github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.merged == true && (github.base_ref == 'dev' || github.base_ref == 'test' || github.base_ref == 'main'))
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
@@ -107,7 +109,12 @@ jobs:
       - name: Deploy to Environment-Specific S3 Path
         shell: bash
         run: |
-          ENV_PATH="${{ github.ref_name }}"
+          TARGET_BRANCH="${{ github.base_ref }}"
+          if [ -z "$TARGET_BRANCH" ]; then
+            TARGET_BRANCH="${{ github.ref_name }}"
+          fi
+
+          ENV_PATH="$TARGET_BRANCH"
           if [ "$ENV_PATH" = "main" ]; then
             ENV_PATH="prod"
           fi
@@ -127,9 +134,14 @@ jobs:
           npm install @playwright/test
           npx playwright install --with-deps
 
-          if [ "${{ github.ref_name }}" = "test" ]; then
+          TARGET_BRANCH="${{ github.base_ref }}"
+          if [ -z "$TARGET_BRANCH" ]; then
+            TARGET_BRANCH="${{ github.ref_name }}"
+          fi
+
+          if [ "$TARGET_BRANCH" = "test" ]; then
             TARGET_URL="https://test-saayam.netlify.app"
-          elif [ "${{ github.ref_name }}" = "dev" ]; then
+          elif [ "$TARGET_BRANCH" = "dev" ]; then
             TARGET_URL="https://dev-saayam.netlify.app"
           else
             TARGET_URL="https://help-for-everyone.org"

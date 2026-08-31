@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 name: Java CI/CD Pipeline - DEV Stage
+=======
+name: Java CI/CD Pipeline
+>>>>>>> origin/dev
 
 on:
   push:
@@ -13,6 +17,7 @@ env:
   S3_BUCKET: saayam-virginia-private
 
 jobs:
+<<<<<<< HEAD
   dev-stage-pipeline:
     name: Build & Test (CI)
     runs-on: ubuntu-latest
@@ -20,34 +25,59 @@ jobs:
     steps:
       # 1. CODE (Checkout source repository)
       - name: CODE (Checkout Repository)
+=======
+  build-and-test:
+    name: Build, Test & QA Stage
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+>>>>>>> origin/dev
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
+<<<<<<< HEAD
       # 2. BUILD / PACKAGE
       - name: BUILD / PACKAGE (Setup Java 17 & Maven Build)
+=======
+      - name: Setup Java 17 & Maven Build
+>>>>>>> origin/dev
         uses: actions/setup-java@v4
         with:
           java-version: "17"
           distribution: "temurin"
           cache: "maven"
 
+<<<<<<< HEAD
       - name: Execute Package Build
         run: mvn clean package -DskipTests
 
       # 3. SETUP ENV
       - name: SETUP ENV (Configure Sonar Cache & Environment)
+=======
+      - name: Cache SonarQube Packages
+>>>>>>> origin/dev
         uses: actions/cache@v4
         with:
           path: ~/.sonar/cache
           key: ${{ runner.os }}-sonar
           restore-keys: ${{ runner.os }}-sonar
 
+<<<<<<< HEAD
       # 4. TEST [SAST] (Unit Tests & SonarQube SAST Scan)
       - name: TEST [SAST] (Execute Unit Tests)
         run: mvn test
 
       - name: TEST [SAST] (SonarQube Security Scan)
+=======
+      - name: Execute Package Build
+        run: mvn clean package -DskipTests
+
+      - name: Execute Unit Tests
+        run: mvn test
+
+      - name: SonarQube Security Scan
+>>>>>>> origin/dev
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
@@ -60,6 +90,7 @@ jobs:
             echo "SONAR_TOKEN secret is not set. Skipping SonarQube SAST scan."
           fi
 
+<<<<<<< HEAD
       # 5. CODE COVERAGE (Warning Only with Dynamic Percentage Check)
       - name: CODE COVERAGE (Verify 90% Jacoco Gate - Warning Only)
         shell: bash
@@ -84,6 +115,14 @@ jobs:
           # docker build -t ${{ env.APP_NAME }}:${{ github.sha }} .
 
       # 7. Upload Build Artifact for Deployment Job
+=======
+      - name: Code Coverage (JaCoCo)
+        run: |
+          echo "Checking JaCoCo code coverage metrics..."
+          mvn jacoco:report || true
+          mvn jacoco:check || echo "⚠️ Warning: Coverage is below target threshold, proceeding."
+
+>>>>>>> origin/dev
       - name: Upload Build Artifact
         uses: actions/upload-artifact@v4
         with:
@@ -91,6 +130,7 @@ jobs:
           path: target/*.jar
 
   deploy:
+<<<<<<< HEAD
     name: Deploy to AWS S3
     needs: dev-stage-pipeline
     if: github.event_name == 'push' && (github.ref_name == 'dev' || github.ref_name == 'test' || github.ref_name == 'main')
@@ -98,6 +138,14 @@ jobs:
 
     steps:
       - name: Checkout repository
+=======
+    name: Deploy to AWS S3 & E2E Testing
+    needs: build-and-test
+    if: github.event_name == 'push' && (github.ref_name == 'dev' || github.ref_name == 'test' || github.ref_name == 'main')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+>>>>>>> origin/dev
         uses: actions/checkout@v4
 
       - name: Download Build Artifact
@@ -106,6 +154,24 @@ jobs:
           name: compiled-build-archive
           path: target/
 
+<<<<<<< HEAD
+=======
+      - name: Extract Version Metadata
+        id: meta
+        shell: bash
+        run: |
+          VERSION_RAW=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
+          VERSION_STRIPPED=$(echo "$VERSION_RAW" | sed 's/-SNAPSHOT$//')
+          DATE_UTC=$(date -u +%Y%m%d-%H%M)
+          VERSION_TAG="v${VERSION_STRIPPED}-${DATE_UTC}"
+          
+          JAR_PATH=$(find target/ -maxdepth 1 -name "*.jar" ! -name "*-sources.jar" ! -name "*-javadoc.jar" | head -n 1)
+          JAR_FILE=$(basename "$JAR_PATH")
+          
+          echo "jar_name=$JAR_FILE" >> $GITHUB_OUTPUT
+          echo "archive_name=${{ env.APP_NAME }}-${VERSION_TAG}.jar" >> $GITHUB_OUTPUT
+
+>>>>>>> origin/dev
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -113,6 +179,7 @@ jobs:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_VOLUNTEER }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_VOLUNTEER }}
 
+<<<<<<< HEAD
       - name: Extract Metadata & Push to AWS S3 Private Bucket
         shell: bash
         run: |
@@ -128,3 +195,38 @@ jobs:
 
           echo "Uploading $ARCHIVE_NAME to AWS S3 Private Bucket..."
           aws s3 cp "target/$JAR_FILE" "s3://${{ env.S3_BUCKET }}/code/${{ github.ref_name }}/volunteer/v1.0.0/$ARCHIVE_NAME"
+=======
+      - name: Deploy to Environment-Specific S3 Path
+        shell: bash
+        run: |
+          ENV_PATH="${{ github.ref_name }}"
+          if [ "$ENV_PATH" = "main" ]; then
+            ENV_PATH="prod"
+          fi
+          
+          TARGET_KEY="s3://${{ env.S3_BUCKET }}/code/$ENV_PATH/volunteer/v1.0.0/${{ steps.meta.outputs.archive_name }}"
+          echo "Uploading to $TARGET_KEY..."
+          aws s3 cp "target/${{ steps.meta.outputs.jar_name }}" "$TARGET_KEY"
+
+      - name: Setup Node.js for Playwright E2E Tests
+        uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+
+      - name: Run Playwright E2E Tests
+        run: |
+          npm init -y
+          npm install @playwright/test
+          npx playwright install --with-deps
+          
+          if [ "${{ github.ref_name }}" = "test" ]; then
+            TARGET_URL="https://test-saayam.netlify.app"
+          elif [ "${{ github.ref_name }}" = "dev" ]; then
+            TARGET_URL="https://dev-saayam.netlify.app"
+          else
+            TARGET_URL="https://help-for-everyone.org"
+          fi
+          
+          echo "Running validation tests against $TARGET_URL"
+          # npx playwright test
+>>>>>>> origin/dev

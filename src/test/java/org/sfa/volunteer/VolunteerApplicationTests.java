@@ -27,6 +27,8 @@ import org.springframework.test.context.TestPropertySource;
     "cors.allowed-headers=Authorization,Content-Type",
     "cors.allowed-credentials=true",
     "cors.allow-credentials=true",
+    "saayam.s3.buckets.euPrivate=dummy-s3-eu-bucket",
+    "saayam.s3.buckets.usPrivate=dummy-s3-us-bucket"
 
     // S3 configuration for profileImageStorageService (dummy values for context load)
     "saayam.s3.buckets.euPrivate=test-bucket-eu",

@@ -1,4 +1,8 @@
+<<<<<<< HEAD
+name: Java CI/CD Pipeline - DEV Stage
+=======
 name: Java CI/CD Pipeline
+>>>>>>> origin/dev
 
 on:
   push:
@@ -13,29 +17,59 @@ env:
   S3_BUCKET: saayam-virginia-private
 
 jobs:
+<<<<<<< HEAD
+  dev-stage-pipeline:
+    name: Build & Test (CI)
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. CODE (Checkout source repository)
+      - name: CODE (Checkout Repository)
+=======
   build-and-test:
     name: Build, Test & QA Stage
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
+>>>>>>> origin/dev
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
+<<<<<<< HEAD
+      # 2. BUILD / PACKAGE
+      - name: BUILD / PACKAGE (Setup Java 17 & Maven Build)
+=======
       - name: Setup Java 17 & Maven Build
+>>>>>>> origin/dev
         uses: actions/setup-java@v4
         with:
           java-version: "17"
           distribution: "temurin"
           cache: "maven"
 
+<<<<<<< HEAD
+      - name: Execute Package Build
+        run: mvn clean package -DskipTests
+
+      # 3. SETUP ENV
+      - name: SETUP ENV (Configure Sonar Cache & Environment)
+=======
       - name: Cache SonarQube Packages
+>>>>>>> origin/dev
         uses: actions/cache@v4
         with:
           path: ~/.sonar/cache
           key: ${{ runner.os }}-sonar
           restore-keys: ${{ runner.os }}-sonar
 
+<<<<<<< HEAD
+      # 4. TEST [SAST] (Unit Tests & SonarQube SAST Scan)
+      - name: TEST [SAST] (Execute Unit Tests)
+        run: mvn test
+
+      - name: TEST [SAST] (SonarQube Security Scan)
+=======
       - name: Execute Package Build
         run: mvn clean package -DskipTests
 
@@ -43,6 +77,7 @@ jobs:
         run: mvn test
 
       - name: SonarQube Security Scan
+>>>>>>> origin/dev
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
@@ -55,12 +90,39 @@ jobs:
             echo "SONAR_TOKEN secret is not set. Skipping SonarQube SAST scan."
           fi
 
+<<<<<<< HEAD
+      # 5. CODE COVERAGE (Warning Only with Dynamic Percentage Check)
+      - name: CODE COVERAGE (Verify 90% Jacoco Gate - Warning Only)
+        shell: bash
+        run: |
+          echo "Checking Jacoco Code Coverage..."
+          mvn jacoco:report || true
+
+          CSV_REPORT="target/site/jacoco/jacoco.csv"
+          if [ -f "$CSV_REPORT" ]; then
+            STATS=$(awk -F, 'NR>1 {missed+=$4; covered+=$5} END { if (missed+covered > 0) printf "%.2f", (covered/(missed+covered))*100; else print "0" }' "$CSV_REPORT")
+            echo "📊 Current Code Coverage is: ${STATS}%"
+          else
+            echo "⚠️ Jacoco CSV report not found at $CSV_REPORT. Running standard check..."
+          fi
+
+          mvn jacoco:check || echo "⚠️ Warning: Coverage is below the target threshold, but proceeding with the pipeline."
+
+      # 6. BUILD DOCKER IMAGE
+      - name: BUILD DOCKER IMAGE
+        run: |
+          echo "Building Docker Image: ${{ env.APP_NAME }}:${{ github.sha }}"
+          # docker build -t ${{ env.APP_NAME }}:${{ github.sha }} .
+
+      # 7. Upload Build Artifact for Deployment Job
+=======
       - name: Code Coverage (JaCoCo)
         run: |
           echo "Checking JaCoCo code coverage metrics..."
           mvn jacoco:report || true
           mvn jacoco:check || echo "⚠️ Warning: Coverage is below target threshold, proceeding."
 
+>>>>>>> origin/dev
       - name: Upload Build Artifact
         uses: actions/upload-artifact@v4
         with:
@@ -68,12 +130,22 @@ jobs:
           path: target/*.jar
 
   deploy:
+<<<<<<< HEAD
+    name: Deploy to AWS S3
+    needs: dev-stage-pipeline
+    if: github.event_name == 'push' && (github.ref_name == 'dev' || github.ref_name == 'test' || github.ref_name == 'main')
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+=======
     name: Deploy to AWS S3 & E2E Testing
     needs: build-and-test
     if: github.event_name == 'push' && (github.ref_name == 'dev' || github.ref_name == 'test' || github.ref_name == 'main')
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
+>>>>>>> origin/dev
         uses: actions/checkout@v4
 
       - name: Download Build Artifact
@@ -82,6 +154,8 @@ jobs:
           name: compiled-build-archive
           path: target/
 
+<<<<<<< HEAD
+=======
       - name: Extract Version Metadata
         id: meta
         shell: bash
@@ -97,6 +171,7 @@ jobs:
           echo "jar_name=$JAR_FILE" >> $GITHUB_OUTPUT
           echo "archive_name=${{ env.APP_NAME }}-${VERSION_TAG}.jar" >> $GITHUB_OUTPUT
 
+>>>>>>> origin/dev
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -104,6 +179,23 @@ jobs:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_VOLUNTEER }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_VOLUNTEER }}
 
+<<<<<<< HEAD
+      - name: Extract Metadata & Push to AWS S3 Private Bucket
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION_RAW=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
+          VERSION_STRIPPED=$(echo "$VERSION_RAW" | sed 's/-SNAPSHOT$//')
+          DATE_UTC=$(date -u +%Y%m%d-%H%M)
+          VERSION_TAG="v${VERSION_STRIPPED}-${DATE_UTC}"
+
+          JAR_PATH=$(find target/ -maxdepth 1 -name "*.jar" ! -name "*-sources.jar" ! -name "*-javadoc.jar" | head -n 1)
+          JAR_FILE=$(basename "$JAR_PATH")
+          ARCHIVE_NAME="${{ env.APP_NAME }}-${VERSION_TAG}.jar"
+
+          echo "Uploading $ARCHIVE_NAME to AWS S3 Private Bucket..."
+          aws s3 cp "target/$JAR_FILE" "s3://${{ env.S3_BUCKET }}/code/${{ github.ref_name }}/volunteer/v1.0.0/$ARCHIVE_NAME"
+=======
       - name: Deploy to Environment-Specific S3 Path
         shell: bash
         run: |
@@ -137,3 +229,4 @@ jobs:
           
           echo "Running validation tests against $TARGET_URL"
           # npx playwright test
+>>>>>>> origin/dev

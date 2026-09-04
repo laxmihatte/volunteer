@@ -61,6 +61,14 @@ public class GlobalExceptionHandler {
                                 errorMessage);
         }
 
+        @ExceptionHandler(ForbiddenException.class)
+        @ResponseBody
+        public <T> SaayamResponse<T> handleForbiddenException(ForbiddenException exception, WebRequest request) {
+            String errorMessage = messageSourceUtil.getMessage(SaayamStatusCode.FORBIDDEN.getCode(), null);
+            log.error("ForbiddenException: {}", exception.getReason());
+            return responseBuilder.buildErrorResponse(HttpStatus.FORBIDDEN.value(), SaayamStatusCode.FORBIDDEN,
+                    errorMessage);
+        }
         @ExceptionHandler(VolunteerException.class)
         @ResponseBody
         public <T> SaayamResponse<T> handleVolunteerException(VolunteerException exception, WebRequest request) {

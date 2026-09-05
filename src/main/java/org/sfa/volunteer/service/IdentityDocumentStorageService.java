@@ -151,57 +151,20 @@ public class IdentityDocumentStorageService {
         );
     }
 
-    /**
-     * Returns the stored document for preview or download.
-     *
-     * Expired documents are still returned - the page shows them read-only
-     * rather than hiding them, and the volunteer needs to see what they are
-     * replacing.
-     *
-     * There is deliberately no delete counterpart to this method. Volunteers
-     * cannot remove an identity document (DR-01, DR-04); the only way a slot
-     * changes is by being overwritten through uploadBase64.
-     */
+    
     public Optional<DownloadedDocument> download(String userId, int documentSlot, String regionHint) {
+    	Optional<StoredObject> found = resolveStored(userId, documentSlot, regionHint);
+        if (found.isEmpty()) return Optional.empty();
+    	StoredObject obj = found.get();
 
-        requireVolunteer(userId);
-        validateSlot(documentSlot);
+    	try {
+             ResponseBytes<GetObjectResponse> res = pickClient(obj.region())
+                .getObjectAsBytes(GetObjectRequest.builder().bucket(obj.bucket()).key(obj.key()).build());
 
-        String stored;
-        try {
-            stored = volunteerService.getGovtIdPath(userId, documentSlot);
-        } catch (Exception e) {
-            throw new ResponseStatusException(
-                    HttpStatus.INTERNAL_SERVER_ERROR, "Could not read identity document record", e);
-       }
-       if (stored == null || stored.isBlank()) {
-           return Optional.empty();
-       }
-        URI uri = URI.create(stored);
-        String ssp = uri.getSchemeSpecificPart();
-        if (ssp.startsWith("//")) ssp = ssp.substring(2);
+             String contentType = res.response().contentType();
+             if (contentType == null || contentType.isBlank()) contentType = "application/octet-stream";
 
-        int slash = ssp.indexOf('/');
-        if (slash <= 0) {
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Invalid identity document URI");
-        }
-
-        String bucket = ssp.substring(0, slash);
-        String key = ssp.substring(slash + 1);
-
-        String effectiveRegion = (regionHint == null || regionHint.isBlank())
-                ? (bucket.equals(euBucket) ? "eu-west-1" : "us-east-1")
-                : regionHint;
-
-        try {
-            ResponseBytes<GetObjectResponse> obj = pickClient(effectiveRegion)
-                    .getObjectAsBytes(GetObjectRequest.builder().bucket(bucket).key(key).build());
-
-            String contentType = obj.response().contentType();
-            if (contentType == null || contentType.isBlank()) contentType = "application/octet-stream";
-
-            return Optional.of(new DownloadedDocument(contentType, obj.asByteArray()));
-
+             return Optional.of(new DownloadedDocument(contentType, res.asByteArray()));
         } catch (S3Exception e) {
             return Optional.empty();
         }
@@ -219,6 +182,42 @@ public class IdentityDocumentStorageService {
         } catch (Exception e) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Volunteer not found", e);
         }
+    }
+
+    private record StoredObject(String bucket, String key, String region) {}
+
+    private Optional<StoredObject> resolveStored(String userId, int documentSlot, String regionHint) {
+    requireVolunteer(userId);
+    validateSlot(documentSlot);
+
+    	String stored;
+    	try {
+        	stored = volunteerService.getGovtIdPath(userId, documentSlot);
+    	} catch (Exception e) {
+        	throw new ResponseStatusException(
+                HttpStatus.INTERNAL_SERVER_ERROR, "Could not read identity document record", e);
+    	}
+    	if (stored == null || stored.isBlank()) {
+            return Optional.empty();
+    	}
+
+    	URI uri = URI.create(stored);
+    	String ssp = uri.getSchemeSpecificPart();
+    	if (ssp.startsWith("//")) ssp = ssp.substring(2);
+
+    	int slash = ssp.indexOf('/');
+    	if (slash <= 0) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Invalid identity document URI");
+    	}
+
+    	String bucket = ssp.substring(0, slash);
+    	String key = ssp.substring(slash + 1);
+
+    	String effectiveRegion = (regionHint == null || regionHint.isBlank())
+            ? (bucket.equals(euBucket) ? "eu-west-1" : "us-east-1")
+            : regionHint;
+
+    	return Optional.of(new StoredObject(bucket, key, effectiveRegion));
     }
 
     private void validateSlot(int documentSlot) {

@@ -5,6 +5,7 @@ import org.sfa.volunteer.dto.common.SaayamResponse;
 import org.sfa.volunteer.dto.common.SaayamStatusCode;
 import org.sfa.volunteer.dto.request.GetIdentityDocumentRequest;
 import org.sfa.volunteer.dto.response.IdentityDocumentMetadata;
+import org.sfa.volunteer.dto.request.UploadIdentityDocumentRequest;
 import org.sfa.volunteer.exception.ForbiddenException;
 import org.sfa.volunteer.service.IdentityDocumentStorageService;
 import org.sfa.volunteer.service.UserService;
@@ -18,6 +19,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/0.0.1/volunteers")
@@ -53,7 +55,21 @@ public class IdentityDocumentController {
                 ? ResponseEntity.noContent().build()
                 : ResponseEntity.ok(responseBuilder.buildSuccessResponse(SaayamStatusCode.SUCCESS, metadata));
     }
+    
+    @PostMapping("/identity-document/upload")
+    public SaayamResponse<Map<String, Object>> upload(
+        @RequestHeader("Authorization") String authorization,
+        @Valid @RequestBody UploadIdentityDocumentRequest request) {
 
+    	authorizeUser(JwtClaims.parse(authorization), request.userId());
+
+    	Map<String, Object> result = storage.uploadBase64(
+            request.userId(), request.documentSlot(), request.documentName(),
+            request.base64(), request.expiresOn(), request.regionHint());
+
+    	return responseBuilder.buildSuccessResponse(
+            SaayamStatusCode.IDENTITY_DOCUMENT_UPLOADED, result);
+    }
     private void authorizeUser(JwtClaims claims, String targetUserId) {
         if (isAdmin(claims.groups())) return;
 

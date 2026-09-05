@@ -156,10 +156,7 @@ public class IdentityDocumentStorageService {
                 "userId", userId,
                 "documentSlot", documentSlot,
                 "documentName", safeName,
-                "expiresOn", expiresOn.toString(),
-                "s3Uri", s3Uri,
-                "bucket", bucket,
-                "key", key
+                "expiresOn", expiresOn.toString()
         );
     }
 

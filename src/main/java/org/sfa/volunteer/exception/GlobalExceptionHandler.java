@@ -11,6 +11,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
 
@@ -62,6 +63,7 @@ public class GlobalExceptionHandler {
         }
 
         @ExceptionHandler(ForbiddenException.class)
+        @ResponseStatus(HttpStatus.FORBIDDEN)
         @ResponseBody
         public <T> SaayamResponse<T> handleForbiddenException(ForbiddenException exception, WebRequest request) {
             String errorMessage = messageSourceUtil.getMessage(SaayamStatusCode.FORBIDDEN.getCode(), null);

@@ -167,11 +167,13 @@ public class VolunteerServiceImpl implements VolunteerService {
       String name = (documentSlot == 1) ? volunteer.getGovtIdName1() : volunteer.getGovtIdName2();
       LocalDate expiry = (documentSlot == 1) ? volunteer.getGovtIdExpiry1() : volunteer.getGovtIdExpiry2();
 
-       if (expiry == null) {
-           return null;   // no document / no expiry recorded for this slot
+       String path = (documentSlot == 1) ? volunteer.getGovtIdPath1() : volunteer.getGovtIdPath2();
+       if (path == null || path.isBlank()) {
+           return null;   // no document stored in this slot
        }
 
-       DocumentStatus status = DocumentStatus.from(expiry);
+       DocumentStatus status = (expiry == null) ? null : DocumentStatus.from(expiry);
+
        return new IdentityDocumentMetadata(name, expiry, status);
     }
 

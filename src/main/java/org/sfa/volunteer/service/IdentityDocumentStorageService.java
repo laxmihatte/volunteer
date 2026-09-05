@@ -50,7 +50,7 @@ public class IdentityDocumentStorageService {
     @Value("${saayam.s3.buckets.usPrivate}")
     private String usBucket;
     
-    @Value("${saayam.identity.presignMinutes:15}")
+    @Value("${saayam.identity.presignMinutes:5}")
     private long presignMinutes;
 
     // Namespaced under saayam.identity rather than saayam.s3 so these do not

@@ -12,6 +12,9 @@ import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.S3Exception;
+import software.amazon.awssdk.services.s3.presigner.S3Presigner;
+import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
+import java.time.Duration;
 
 import java.net.URI;
 import java.time.LocalDate;
@@ -38,12 +41,17 @@ public class IdentityDocumentStorageService {
     private final VolunteerService volunteerService;
     private final S3Client s3ClientUs;
     private final S3Client s3ClientEu;
+    private final S3Presigner s3PresignerUs;
+    private final S3Presigner s3PresignerEu;
 
     @Value("${saayam.s3.buckets.euPrivate}")
     private String euBucket;
 
     @Value("${saayam.s3.buckets.usPrivate}")
     private String usBucket;
+    
+    @Value("${saayam.identity.presignMinutes:15}")
+    private long presignMinutes;
 
     // Namespaced under saayam.identity rather than saayam.s3 so these do not
     // collide with the profile image settings, which share the saayam.s3 keys
@@ -60,11 +68,15 @@ public class IdentityDocumentStorageService {
     public IdentityDocumentStorageService(
             VolunteerService volunteerService,
             @Qualifier("s3ClientUs") S3Client s3ClientUs,
-            @Qualifier("s3ClientEu") S3Client s3ClientEu
+            @Qualifier("s3ClientEu") S3Client s3ClientEu,
+            @Qualifier("s3PresignerUs") S3Presigner s3PresignerUs,
+            @Qualifier("s3PresignerEu") S3Presigner s3PresignerEu
     ) {
         this.volunteerService = volunteerService;
         this.s3ClientUs = s3ClientUs;
         this.s3ClientEu = s3ClientEu;
+        this.s3PresignerUs = s3PresignerUs;
+        this.s3PresignerEu = s3PresignerEu;
     }
 
     /**
@@ -294,6 +306,10 @@ public class IdentityDocumentStorageService {
     private S3Client pickClient(String regionHint) {
         return isEu(regionHint) ? s3ClientEu : s3ClientUs;
     }
+    
+    private S3Presigner pickPresigner(String regionHint) {
+        return isEu(regionHint) ? s3PresignerEu : s3PresignerUs;
+    }
 
     /**
      * Magic-byte sniffing. Narrower than the profile image version: WEBP is not
@@ -314,4 +330,15 @@ public class IdentityDocumentStorageService {
         }
         return null;
     }
+    public Optional<String> presignedUrl(String userId, int documentSlot, String regionHint) {
+        return resolveStored(userId, documentSlot, regionHint).map(obj -> {
+        GetObjectRequest get = GetObjectRequest.builder()
+                .bucket(obj.bucket()).key(obj.key()).build();
+        GetObjectPresignRequest presign = GetObjectPresignRequest.builder()
+                .signatureDuration(Duration.ofMinutes(presignMinutes))
+                .getObjectRequest(get)
+                .build();
+        return pickPresigner(obj.region()).presignGetObject(presign).url().toString();
+    });
+}
 }

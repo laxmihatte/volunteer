@@ -8,6 +8,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.server.ResponseStatusException;
 import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 
 import java.time.LocalDate;
 import java.util.Base64;
@@ -25,6 +26,12 @@ class IdentityDocumentStorageServiceTest {
     private S3Client s3ClientUs;
     @Mock
     private S3Client s3ClientEu;
+    
+    @Mock
+    private S3Presigner s3PresignerUs;
+
+    @Mock
+    private S3Presigner s3PresignerEu;
 
     private IdentityDocumentStorageService service;
 
@@ -33,7 +40,8 @@ class IdentityDocumentStorageServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new IdentityDocumentStorageService(volunteerService, s3ClientUs, s3ClientEu);
+        service = new IdentityDocumentStorageService(
+        volunteerService, s3ClientUs, s3ClientEu, s3PresignerUs, s3PresignerEu);
 
         ReflectionTestUtils.setField(service, "maxBytes", 2097152L);
         ReflectionTestUtils.setField(service, "allowedMimeCsv", "image/jpeg,image/png,application/pdf");

@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import java.util.Map;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/0.0.1/volunteers")
@@ -70,6 +71,22 @@ public class IdentityDocumentController {
     	return responseBuilder.buildSuccessResponse(
             SaayamStatusCode.IDENTITY_DOCUMENT_UPLOADED, result);
     }
+    
+   @PostMapping("/identity-document/file")
+   public ResponseEntity<SaayamResponse<Map<String, String>>> viewFile(
+        @RequestHeader("Authorization") String authorization,
+        @Valid @RequestBody GetIdentityDocumentRequest request) {
+
+    authorizeUser(JwtClaims.parse(authorization), request.userId());
+
+    Optional<String> url = storage.presignedUrl(request.userId(), request.documentSlot(), null);
+
+    return url.isEmpty()
+            ? ResponseEntity.noContent().build()
+            : ResponseEntity.ok(responseBuilder.buildSuccessResponse(
+                    SaayamStatusCode.SUCCESS, Map.of("url", url.get())));
+    }
+
     private void authorizeUser(JwtClaims claims, String targetUserId) {
         if (isAdmin(claims.groups())) return;
 

@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
+import org.springframework.http.ResponseEntity;
 
 @RestControllerAdvice
 @Slf4j
@@ -97,7 +98,19 @@ public class GlobalExceptionHandler {
                 }
                 return responseBuilder.buildErrorResponse(HttpStatus.NOT_FOUND.value(), status, errorMessage);
         }
-
+        
+        @ExceptionHandler(IdentityDocumentException.class)
+        @ResponseBody
+        public <T> ResponseEntity<SaayamResponse<T>> handleIdentityDocumentException(
+                        IdentityDocumentException exception, WebRequest request) {
+                String errorMessage = messageSourceUtil.getMessage(exception.getStatusCode().getCode(), null);
+                log.error("IdentityDocumentException: {}", exception.getReason());
+                return ResponseEntity.status(exception.getHttpStatus())
+                                .body(responseBuilder.buildErrorResponse(
+                                        exception.getHttpStatus().value(),
+                                        exception.getStatusCode(),
+                                        errorMessage));
+        }
         @ExceptionHandler(UserOrganizationNotFoundException.class)
         @ResponseBody
         public <T> SaayamResponse<T> handleUserOrganizationNotFoundException(

@@ -133,7 +133,7 @@ class IdentityDocumentControllerTest {
                         .header("Authorization", volunteerToken())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(slotBody(OWNER, 5)))
-                .andExpect(status().isOk()); // see note below
+                .andExpect(status().isBadRequest());
     }
 
     // ---------- metadata behaviour ----------

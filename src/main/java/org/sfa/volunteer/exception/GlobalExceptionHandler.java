@@ -130,9 +130,10 @@ public class GlobalExceptionHandler {
         }
 
 	@ExceptionHandler(MethodArgumentNotValidException.class)
-    @ResponseBody
-    public <T> SaayamResponse<T> handleValidationException(MethodArgumentNotValidException exception, WebRequest request) {
-        String errorMessage = exception.getBindingResult().getFieldErrors().stream()
+        @ResponseStatus(HttpStatus.BAD_REQUEST)
+        @ResponseBody
+        public <T> SaayamResponse<T> handleValidationException(MethodArgumentNotValidException exception, WebRequest request) {
+            String errorMessage = exception.getBindingResult().getFieldErrors().stream()
                 .map(fieldError -> fieldError.getDefaultMessage())
                 .collect(Collectors.joining("; "));
         log.error("ValidationException: {}", errorMessage);

@@ -4,6 +4,8 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.sfa.volunteer.dto.common.SaayamStatusCode;
+import org.sfa.volunteer.exception.IdentityDocumentException;
 import org.springframework.web.server.ResponseStatusException;
 import software.amazon.awssdk.core.ResponseBytes;
 import software.amazon.awssdk.core.sync.RequestBody;
@@ -97,7 +99,8 @@ public class IdentityDocumentStorageService {
         validateSlot(documentSlot);
 
         if (base64 == null || base64.isBlank()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "base64 is required");
+                    throw new IdentityDocumentException(SaayamStatusCode.INVALID_DOCUMENT_FILE,
+                    HttpStatus.BAD_REQUEST, "base64 is required");
         }
         String safeName = sanitizeDocumentName(documentName);
         validateExpiry(expiresOn);
@@ -106,14 +109,16 @@ public class IdentityDocumentStorageService {
         try {
             bytes = Base64.getDecoder().decode(stripDataUrlPrefix(base64));
         } catch (IllegalArgumentException e) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid base64");
+                    throw new IdentityDocumentException(SaayamStatusCode.INVALID_DOCUMENT_FILE,
+                    HttpStatus.BAD_REQUEST, "Invalid base64");
         }
 
         // The bytes decide the type; a client-declared content type is not
         // trusted for a government identity document.
         String detected = detectMime(bytes);
         if (detected == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                 throw new IdentityDocumentException(SaayamStatusCode.INVALID_DOCUMENT_TYPE,
+                    HttpStatus.BAD_REQUEST,
                     "Unsupported document type. Allowed: image/jpeg, image/png, application/pdf");
         }
         validate(detected, bytes.length);
@@ -133,21 +138,22 @@ public class IdentityDocumentStorageService {
                     RequestBody.fromBytes(bytes)
             );
         } catch (S3Exception e) {
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to upload to S3", e);
+                throw new IdentityDocumentException(SaayamStatusCode.DOCUMENT_STORAGE_ERROR,
+                    HttpStatus.INTERNAL_SERVER_ERROR, "Failed to upload to S3", e);
         }
 
         String s3Uri = "s3://" + bucket + "/" + key;
         try {
             volunteerService.updateGovtIdPath(userId, documentSlot, s3Uri);
         } catch (Exception e) {
-            throw new ResponseStatusException(
-                     HttpStatus.INTERNAL_SERVER_ERROR, "Could not save identity document record", e);
+                throw new IdentityDocumentException(SaayamStatusCode.DOCUMENT_STORAGE_ERROR,
+                    HttpStatus.INTERNAL_SERVER_ERROR, "Could not save identity document record", e);
        }
 
        try {
             volunteerService.updateGovtIdMetadata(userId, documentSlot, safeName, expiresOn);
         } catch (Exception e) {
-            throw new ResponseStatusException(
+                 throw new IdentityDocumentException(SaayamStatusCode.DOCUMENT_STORAGE_ERROR,
                     HttpStatus.INTERNAL_SERVER_ERROR, "Could not save identity document metadata", e);
         }
 
@@ -203,7 +209,7 @@ public class IdentityDocumentStorageService {
     	try {
         	stored = volunteerService.getGovtIdPath(userId, documentSlot);
     	} catch (Exception e) {
-        	throw new ResponseStatusException(
+                throw new IdentityDocumentException(SaayamStatusCode.DOCUMENT_STORAGE_ERROR,
                 HttpStatus.INTERNAL_SERVER_ERROR, "Could not read identity document record", e);
     	}
     	if (stored == null || stored.isBlank()) {
@@ -216,7 +222,8 @@ public class IdentityDocumentStorageService {
 
     	int slash = ssp.indexOf('/');
     	if (slash <= 0) {
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Invalid identity document URI");
+           throw new IdentityDocumentException(SaayamStatusCode.DOCUMENT_STORAGE_ERROR,
+                HttpStatus.INTERNAL_SERVER_ERROR, "Invalid identity document URI");
     	}
 
     	String bucket = ssp.substring(0, slash);
@@ -231,28 +238,32 @@ public class IdentityDocumentStorageService {
 
     private void validateSlot(int documentSlot) {
         if (documentSlot != 1 && documentSlot != 2) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "documentSlot must be 1 or 2");
+           throw new IdentityDocumentException(SaayamStatusCode.INVALID_DOCUMENT_SLOT,
+                    HttpStatus.BAD_REQUEST, "documentSlot must be 1 or 2");
         }
     }
 
     private void validateExpiry(LocalDate expiresOn) {
         if (expiresOn == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "expiresOn is required");
+            throw new IdentityDocumentException(SaayamStatusCode.INVALID_DOCUMENT_EXPIRY, HttpStatus.BAD_REQUEST, "expiresOn is required");
         }
         // An already-expired document lands in the expired state on arrival and
         // immediately demands the replacement the volunteer just performed.
         if (expiresOn.isBefore(LocalDate.now())) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "expiresOn is in the past");
+           throw new IdentityDocumentException(SaayamStatusCode.INVALID_DOCUMENT_EXPIRY,
+                    HttpStatus.BAD_REQUEST, "expiresOn is in the past");
         }
     }
 
     private String sanitizeDocumentName(String documentName) {
         if (documentName == null || documentName.isBlank()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "documentName is required");
+           throw new IdentityDocumentException(SaayamStatusCode.DOCUMENT_NAME_REQUIRED,
+                    HttpStatus.BAD_REQUEST, "documentName is required");
         }
         String name = documentName.trim().replaceAll(".*[/\\\\]", "");
         if (name.isEmpty()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "documentName is required");
+           throw new IdentityDocumentException(SaayamStatusCode.INVALID_DOCUMENT_EXPIRY,
+                    HttpStatus.BAD_REQUEST, "expiresOn is in the past");
         }
         return name.length() > 255 ? name.substring(0, 255) : name;
     }
@@ -272,14 +283,17 @@ public class IdentityDocumentStorageService {
 
         List<String> allowed = Arrays.asList(allowedMimeCsv.split(","));
         if (!allowed.contains(m)) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+           throw new IdentityDocumentException(SaayamStatusCode.INVALID_DOCUMENT_TYPE,
+                    HttpStatus.BAD_REQUEST,
                     "Unsupported document type. Allowed: " + String.join(", ", allowed));
         }
         if (size <= 0) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Empty file");
+           throw new IdentityDocumentException(SaayamStatusCode.INVALID_DOCUMENT_FILE,
+                    HttpStatus.BAD_REQUEST, "Empty file");
         }
         if (size > maxBytes) {
-            throw new ResponseStatusException(HttpStatus.PAYLOAD_TOO_LARGE,
+           throw new IdentityDocumentException(SaayamStatusCode.DOCUMENT_SIZE_EXCEEDED,
+                    HttpStatus.PAYLOAD_TOO_LARGE,
                     "Max upload size is " + (maxBytes / (1024 * 1024)) + " MB");
         }
     }
@@ -337,5 +351,5 @@ public class IdentityDocumentStorageService {
                 .build();
         return pickPresigner(obj.region()).presignGetObject(presign).url().toString();
     });
-}
+  }
 }

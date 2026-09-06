@@ -1,12 +1,12 @@
 package org.sfa.volunteer.service;
 
+import org.sfa.volunteer.dto.common.SaayamStatusCode;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
-import org.springframework.web.server.ResponseStatusException;
 import software.amazon.awssdk.core.ResponseBytes;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
@@ -29,6 +29,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.http.HttpStatus.BAD_REQUEST;
+import org.sfa.volunteer.exception.IdentityDocumentException;
 
 @ExtendWith(MockitoExtension.class)
 class IdentityDocumentStorageServiceTest {
@@ -77,17 +78,19 @@ class IdentityDocumentStorageServiceTest {
 
     @Test
     void rejectsNullExpiry() {
-        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+        IdentityDocumentException ex = assertThrows(IdentityDocumentException.class,
                 () -> service.uploadBase64(USER_ID, 1, "passport.png", validBase64, null, "us-east-1"));
-        assertEquals(BAD_REQUEST, ex.getStatusCode());
+        assertEquals(BAD_REQUEST, ex.getHttpStatus());
+        assertEquals(SaayamStatusCode.INVALID_DOCUMENT_EXPIRY, ex.getStatusCode());
     }
 
     @Test
     void rejectsPastExpiry() {
-        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+        IdentityDocumentException ex = assertThrows(IdentityDocumentException.class,
                 () -> service.uploadBase64(USER_ID, 1, "passport.png", validBase64,
                         LocalDate.now().minusDays(1), "us-east-1"));
-        assertEquals(BAD_REQUEST, ex.getStatusCode());
+        assertEquals(BAD_REQUEST, ex.getHttpStatus());
+        assertEquals(SaayamStatusCode.INVALID_DOCUMENT_EXPIRY, ex.getStatusCode());
     }
 
     @Test
@@ -98,16 +101,18 @@ class IdentityDocumentStorageServiceTest {
         };
         String badBase64 = Base64.getEncoder().encodeToString(gifBytes);
 
-        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+        IdentityDocumentException ex = assertThrows(IdentityDocumentException.class,
                 () -> service.uploadBase64(USER_ID, 1, "sneaky.png", badBase64, futureDate, "us-east-1"));
-        assertEquals(BAD_REQUEST, ex.getStatusCode());
+        assertEquals(BAD_REQUEST, ex.getHttpStatus());
+        assertEquals(SaayamStatusCode.INVALID_DOCUMENT_TYPE, ex.getStatusCode());
     }
 
     @Test
     void rejectsBlankDocumentName() {
-        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+        IdentityDocumentException ex = assertThrows(IdentityDocumentException.class,
                 () -> service.uploadBase64(USER_ID, 1, "   ", validBase64, futureDate, "us-east-1"));
-        assertEquals(BAD_REQUEST, ex.getStatusCode());
+        assertEquals(BAD_REQUEST, ex.getHttpStatus());
+        assertEquals(SaayamStatusCode.DOCUMENT_NAME_REQUIRED, ex.getStatusCode());
     }
 
     // ---------- resolveStored, exercised through download ----------
@@ -130,7 +135,7 @@ class IdentityDocumentStorageServiceTest {
     void downloadRejectsStoredUriWithoutAKey() throws Exception {
         when(volunteerService.getGovtIdPath(USER_ID, 1)).thenReturn("s3://bucket-only");
 
-        assertThrows(ResponseStatusException.class,
+        assertThrows(IdentityDocumentException.class,
                 () -> service.download(USER_ID, 1, "us-east-1"));
     }
 

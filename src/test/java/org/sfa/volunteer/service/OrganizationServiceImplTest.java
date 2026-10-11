@@ -18,6 +18,7 @@ import java.util.Collections;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -83,5 +84,29 @@ class OrganizationServiceImplTest {
         assertEquals("ORG-00-000-000-004", response.orgId());
         assertEquals("Hope Shelter", response.orgName());
     }
+    
+    @Test
+    void createOrganization_throws_whenOrgTypeInvalid() {
+       CreateOrganizationRequest request = CreateOrganizationRequest.builder()
+            .orgName("Hope Shelter")
+            .orgType("bogus")
+            .zipCode("02101")
+            .build();
+
+    assertThrows(IllegalArgumentException.class,
+            () -> organizationService.createOrganization(request));
+    }
+
+   @Test
+   void createOrganization_throws_whenOrgSizeInvalid() {
+      CreateOrganizationRequest request = CreateOrganizationRequest.builder()
+            .orgName("Hope Shelter")
+            .orgSize("bogus")
+            .zipCode("02101")
+            .build();
+
+    assertThrows(IllegalArgumentException.class,
+            () -> organizationService.createOrganization(request));
+   }
 }
 

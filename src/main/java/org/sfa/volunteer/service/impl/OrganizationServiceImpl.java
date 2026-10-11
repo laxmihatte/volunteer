@@ -24,6 +24,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 @Service
 public class OrganizationServiceImpl implements OrganizationService {
+    private static final String DEFAULT_USER_ROLE = "VOLUNTEER";
     private final OrganizationRepository organizationRepository;
     private final UserOrgMapRepository userOrgMapRepository;
     private final OrgSkillRepository orgSkillRepository;
@@ -81,8 +82,10 @@ public class OrganizationServiceImpl implements OrganizationService {
     public OrganizationResponse createOrganization(CreateOrganizationRequest request) {
         Organization organization = Organization.builder()
                 .orgName(request.orgName())
-                .orgType(request.orgType())
-                .orgSize(request.orgSize())
+                .orgType(request.orgType() == null ? null
+                        : OrgType.fromString(request.orgType()).getDbValue())
+                .orgSize(request.orgSize() == null ? null
+                       : OrgSize.fromString(request.orgSize()).getDbValue())
                 .street(request.street())
                 .cityName(request.cityName())
                 .stateId(request.stateId())
@@ -124,7 +127,7 @@ public class OrganizationServiceImpl implements OrganizationService {
     UserOrgMap userOrgMap = UserOrgMap.builder()
             .userId(userId)
             .orgId(organization.getOrgId())
-            .userRole("VOLUNTEER")
+            .userRole(DEFAULT_USER_ROLE)
             .build();
 
     userOrgMapRepository.save(userOrgMap);

@@ -1,21 +1,14 @@
 package org.sfa.volunteer.model;
 
-import org.hibernate.annotations.ColumnTransformer;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.hibernate.annotations.JdbcTypeCode;
-import org.hibernate.type.SqlTypes;
+import java.time.ZonedDateTime;
 
 @Entity
-@Table(name="organizations")
+@Table(name = "organization")
 @Data
 @Builder
 @NoArgsConstructor
@@ -23,48 +16,44 @@ import org.hibernate.type.SqlTypes;
 public class Organization {
 
     @Id
-    @org.hibernate.annotations.Generated(event = org.hibernate.generator.EventType.INSERT)
-    @Column(name = "org_id", insertable = false, updatable = false)
-    private String orgId;
-    
-    @Column(name="org_name")
-    private String orgName;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "organization_id")
+    private Long id;
 
-    @Column(name="street")
-    private String street;
+    @OneToOne
+    @JoinColumn(name = "user_id", referencedColumnName = "user_id", nullable = false, unique = true)
+    private User user;
 
-    @Column(name="city_name")
-    private String cityName;
+    @Column(name = "organization_name", nullable = false)
+    private String organizationName;
 
-    @Column(name="zip_code")
-    private String zipCode;	
+    @Column(name = "organization_type")
+    private String organizationType;
 
-    @Column(name="mission")
-    private String mission;	
+    @Column(name = "phone_number")
+    private String phoneNumber;
 
-    @Column(name="web_url")
-    private String webUrl;
-
-    @Column(name="phone")
-    private String phone;
-
-    @Column(name="email")
+    @Column(name = "email")
     private String email;
-    
-    @Column(name="org_rating")
-    private Integer orgRating;
 
-    @Column(name="is_collaborator")
-    private Boolean isCollaborator;
+    @Column(name = "url")
+    private String url;
 
-    @Column(name="state_id")
-    private String stateId;
+    @Column(name = "street_address1")
+    private String streetAddress1;
 
-    @Column(name = "org_type")
-    @ColumnTransformer(write = "?::org_type_enum")
-    private String orgType;
+    @Column(name = "street_address2")
+    private String streetAddress2;
 
-    @Column(name = "org_size")
-    @ColumnTransformer(write = "?::org_size_enum")
-    private String orgSize;
+    @Column(name = "city")
+    private String city;
+
+    @Column(name = "state")
+    private String state;
+
+    @Column(name = "zip_code")
+    private String zipCode;
+
+    @Column(name = "last_update_date")
+    private ZonedDateTime lastUpdateDate;
 }

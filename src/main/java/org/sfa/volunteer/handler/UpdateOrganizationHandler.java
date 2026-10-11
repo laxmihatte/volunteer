@@ -11,101 +11,78 @@ import org.sfa.volunteer.VolunteerApplication;
 import org.sfa.volunteer.dto.common.SaayamResponse;
 import org.sfa.volunteer.dto.common.SaayamStatusCode;
 import org.sfa.volunteer.dto.request.UpdateOrganizationRequest;
-import org.sfa.volunteer.dto.response.OrganizationDetailsResponse;
-import org.sfa.volunteer.exception.OrganizationNotFoundException;
-import org.sfa.volunteer.service.OrganizationService;
+import org.sfa.volunteer.dto.response.OrganizationResponse;
+import org.sfa.volunteer.service.UserService;
 import org.sfa.volunteer.util.MessageSourceUtil;
 import org.sfa.volunteer.util.ResponseBuilder;
 import org.springframework.boot.SpringApplication;
 import org.springframework.context.ApplicationContext;
-import jakarta.validation.Validator;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
 
-public class UpdateOrganizationHandler
-        implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
+public class UpdateOrganizationHandler implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
-    private static final OrganizationService organizationService;
+    private static final UserService userService;
     private static final ResponseBuilder responseBuilder;
     private static final MessageSourceUtil messageSourceUtil;
-    private static final Validator validator;
-
-    private static final ObjectMapper objectMapper = new ObjectMapper()
-            .registerModule(new JavaTimeModule())
-            .enable(SerializationFeature.INDENT_OUTPUT);
+    private static final ObjectMapper objectMapper;
+    private static final Map<String, String> CORS_HEADERS = new HashMap<>();
 
     static {
-        ApplicationContext applicationContext = SpringApplication.run(VolunteerApplication.class);
-        organizationService = applicationContext.getBean(OrganizationService.class);
-        responseBuilder = applicationContext.getBean(ResponseBuilder.class);
-        messageSourceUtil = applicationContext.getBean(MessageSourceUtil.class);
-        validator = applicationContext.getBean(Validator.class);
+        // Initializing Spring context
+        ApplicationContext context = SpringApplication.run(VolunteerApplication.class);
+        userService = context.getBean(UserService.class);
+        responseBuilder = context.getBean(ResponseBuilder.class);
+        messageSourceUtil = context.getBean(MessageSourceUtil.class);
+        objectMapper = new ObjectMapper()
+                .registerModule(new JavaTimeModule())
+                .enable(SerializationFeature.INDENT_OUTPUT);
+
+        // CORS headers
+        CORS_HEADERS.put("Access-Control-Allow-Origin", "*");
+        CORS_HEADERS.put("Access-Control-Allow-Methods", "GET,OPTIONS,PUT");
+        CORS_HEADERS.put("Access-Control-Allow-Headers", "Content-Type,Authorization");
     }
 
     @Override
-    public APIGatewayProxyResponseEvent handleRequest(
-            APIGatewayProxyRequestEvent requestEvent,
-            Context context
-    ) {
-        APIGatewayProxyResponseEvent response = new APIGatewayProxyResponseEvent();
-
+    public APIGatewayProxyResponseEvent handleRequest(APIGatewayProxyRequestEvent req, Context ctx) {
+        APIGatewayProxyResponseEvent resp = new APIGatewayProxyResponseEvent();
+        // Adding CORS headers to all responses
+        resp.setHeaders(CORS_HEADERS);
         try {
-            String orgId = Optional.ofNullable(requestEvent.getPathParameters())
-                    .map(p -> p.get("orgId"))
-                    .filter(v -> !v.isBlank())
-                    .orElseThrow(() -> new IllegalArgumentException("Missing path parameter 'orgId'"));
+            String userId = Optional.ofNullable(req.getPathParameters())
+                    .map(p -> p.get("userId"))
+                    .orElseThrow(() -> new RuntimeException("Missing path parameter 'userId'"));
 
-            if (requestEvent.getBody() == null || requestEvent.getBody().isBlank()) {
-                throw new IllegalArgumentException("Request body is required");
-            }
+            Map<String, Object> bodyMap = objectMapper.readValue(req.getBody(), Map.class);
+            UpdateOrganizationRequest updateReq = objectMapper.convertValue(bodyMap, UpdateOrganizationRequest.class);
 
-            UpdateOrganizationRequest updateRequest =
-        objectMapper.readValue(requestEvent.getBody(), UpdateOrganizationRequest.class);
+            OrganizationResponse updated = userService.updateUserOrganization(userId, updateReq);
 
-       var violations = validator.validate(updateRequest);
-           if (!violations.isEmpty()) {
-               String errorMessage = violations.stream()
-                       .map(v -> v.getMessage())
-                       .collect(java.util.stream.Collectors.joining("; "));
-               throw new IllegalArgumentException(errorMessage);
-      }
+            SaayamResponse<OrganizationResponse> body = responseBuilder.buildSuccessResponse(
+                    SaayamStatusCode.ORGANIZATION_UPDATED,
+                    new Object[]{userId},
+                    updated
+            );
 
-     OrganizationDetailsResponse updated =
-        organizationService.updateOrganization(orgId, updateRequest);
-            SaayamResponse<OrganizationDetailsResponse> successResponse =
-                    responseBuilder.buildSuccessResponse(
-                            SaayamStatusCode.ORGANIZATION_UPDATED,
-                            new Object[]{orgId},
-                            updated
-                    );
-
-            response.setStatusCode(200);
-            response.setBody(objectMapper.writeValueAsString(successResponse));
-
-        } catch (IllegalArgumentException e) {
-            setErrorResponse(response, 400, SaayamStatusCode.BAD_REQUEST);
-        } catch (OrganizationNotFoundException e) {
-            setErrorResponse(response, 404, SaayamStatusCode.ORGANIZATION_NOT_FOUND);
+            resp.setStatusCode(200);
+            resp.setBody(objectMapper.writeValueAsString(body));
         } catch (Exception e) {
-            setErrorResponse(response, 500, SaayamStatusCode.INTERNAL_SERVER_ERROR);
+            String errMsg = messageSourceUtil.getMessage(SaayamStatusCode.INTERNAL_SERVER_ERROR.getCode(), null);
+            SaayamResponse<Void> errBody = responseBuilder.buildErrorResponse(
+                    500,
+                    SaayamStatusCode.INTERNAL_SERVER_ERROR,
+                    errMsg
+            );
+            resp.setStatusCode(500);
+            try {
+                resp.setBody(objectMapper.writeValueAsString(errBody));
+            } catch (Exception ex) {
+                resp.setBody("{\"message\":\"Serialization error\"}");
+            }
         }
-
-        return response;
-    }
-
-    private void setErrorResponse(
-            APIGatewayProxyResponseEvent response,
-            int statusCode,
-            SaayamStatusCode saayamStatusCode
-    ) {
-        String errorMessage = messageSourceUtil.getMessage(saayamStatusCode.getCode(), null);
-        SaayamResponse<Void> errorResponse =
-                responseBuilder.buildErrorResponse(statusCode, saayamStatusCode, errorMessage);
-        response.setStatusCode(statusCode);
-        try {
-            response.setBody(objectMapper.writeValueAsString(errorResponse));
-        } catch (Exception jsonException) {
-            response.setBody("{\"message\":\"Failed to serialize error response\"}");
-        }
+        return resp;
     }
 }

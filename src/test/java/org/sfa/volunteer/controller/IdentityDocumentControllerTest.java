@@ -140,6 +140,13 @@ class IdentityDocumentControllerTest {
 
     // ---------- validation ----------
 
+    /**
+     * Bean validation runs during argument binding, before the controller method,
+     * so a malformed body is rejected before authorization executes. The service-wide
+     * convention returns HTTP 200 with statusCode 400 in the SaayamResponse body.
+     * This test deliberately does not stub getUserIdByEmailForAuth.
+     */
+    
     @Test
     void rejectsMalformedBodyBeforeAuthorization() throws Exception {
         mockMvc.perform(post(METADATA_URL)
